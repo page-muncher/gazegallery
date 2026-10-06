@@ -6,6 +6,8 @@ A portable Windows image viewer for browsing art, sorting folders and arranging 
 
 Extract the whole ZIP to a writable folder and run **gazegallery.exe**. The release includes the Windows x64 runtime and three plugins; no separate .NET installation is needed. Open the bundled Full_Guide.html in a browser for the offline three-column guide.
 
+[![Watch the gazegallery video](https://img.youtube.com/vi/Al7vJRV9WOU/hqdefault.jpg)](https://www.youtube.com/watch?v=Al7vJRV9WOU)
+
 ## Features
 
 - Grid, masonry and horizontal river thumbnails, filters, autoscroll, Alt previews and batch selection/dragging.
