@@ -1,0 +1,14 @@
+Build gazegallery on Windows with the .NET 10 SDK.
+From the repository root:
+  dotnet publish source/gazegallery.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
+  dotnet build plugins/SimpleDraw/source/SimpleDraw.csproj -c Release -o plugin-build
+  dotnet build plugins/Wallpaper/source/Wallpaper.csproj -c Release -o plugin-build
+  dotnet build plugins/ColorPicker/source/ColorPicker.csproj -c Release -o plugin-build
+Copy the three plugin DLLs into publish/plugins. Copy libmpv-2.dll from the matching
+portable release into publish/runtime, or build it using the upstream recipes in
+ThirdPartyNotices.txt. Keep the matching Plugin API assembly from the app build.
+The .NET SDK restores NuGet packages; runtime native dependencies are included by
+publish. Copy docs/Readme.txt and docs/Full_Guide.html into publish.
+Included internal verification helpers are development tools and expect disposable
+fixtures; they are not a portable end-user test suite. Never run mutation tests on
+original media. See scripts/Publish-Release.ps1 for uploading a prepared ZIP.

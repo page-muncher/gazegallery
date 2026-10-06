@@ -1,0 +1,30 @@
+gazegallery 0.37.0 - bundled components
+
+.NET 10.0.12 Windows x64 runtime / Windows Desktop runtime
+https://github.com/dotnet/runtime/tree/v10.0.12
+https://github.com/dotnet/wpf/tree/v10.0.12
+Licenses and third-party notices: licenses/microsoft.*
+
+SkiaSharp 3.119.4 and native Windows assets
+https://github.com/mono/SkiaSharp/tree/v3.119.4
+Licenses and third-party notices: licenses/skiasharp.*
+
+libmpv Windows x64, upstream shinchiro build dated 2026-09-24
+mpv commit: 2a4eb8067c; FFmpeg commit: 1933345f0
+Unmodified binary: ../runtime/libmpv-2.dll
+Binary release: https://github.com/shinchiro/mpv-winbuild-cmake/releases/tag/20260924
+mpv source: https://github.com/mpv-player/mpv/tree/2a4eb8067c
+FFmpeg source: https://github.com/FFmpeg/FFmpeg/tree/1933345f0
+Windows build recipes/dependencies: https://github.com/shinchiro/mpv-winbuild-cmake
+Licenses: licenses/mpv-* and licenses/FFmpeg-LICENSE.txt
+This build includes GPL components. Preserve the upstream notices and source
+availability when redistributing. Third-party licenses remain with their owners.
+
+gazegallery source matching this build is included in Source/ for inspection and
+rebuilding. User media, preferences, folder history, recovery files, test outputs
+and build-machine caches are not included.
+
+Magick.NET-Q8-x64 and Magick.NET.Core 14.17.1
+https://github.com/dlemstra/Magick.NET/tree/14.17.1
+ImageMagick and codec dependencies are bundled by upstream.
+Complete upstream component notices: licenses/Magick.NET-Notice.txt

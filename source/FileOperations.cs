@@ -1,0 +1,61 @@
+using System;
+using System.IO;
+using System.Linq;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Runtime.InteropServices;
+using System.Windows.Media.Imaging;
+
+namespace gazegallery;
+public record Change(string Kind,string Source,string Target,string? Backup=null);
+public sealed class UndoEntry { public List<Change> Changes=new();public long Navigation;public string? Viewed; }
+public sealed class FileOperations {
+ public List<UndoEntry> History=new();public bool Busy;public int Count=>History.Count;
+ string BackupPath()=>Path.Combine(Paths.Data,"recovery",Guid.NewGuid().ToString("N"));
+ public Task<Change> ReplaceBytes(string target,byte[] data){Paths.Guard(target);return Task.Run(()=>{string backup=BackupPath(),temp=target+".gazegallery-"+Guid.NewGuid().ToString("N");File.Copy(target,backup);try{File.WriteAllBytes(temp,data);File.Move(temp,target,true);return new Change("crop",target,target,backup);}catch{if(File.Exists(temp))File.Delete(temp);File.Delete(backup);throw;}});}
+ public void Commit(UndoEntry e){if(e.Changes.Count==0)return;History.Add(e);while(History.Count>5){Cleanup(History[0]);History.RemoveAt(0);}Journal();}
+ void Journal()=>File.WriteAllText(Path.Combine(Paths.Data,"recovery.json"),System.Text.Json.JsonSerializer.Serialize(History,new System.Text.Json.JsonSerializerOptions{IncludeFields=true,WriteIndented=true}));
+ void Cleanup(UndoEntry e){foreach(var c in e.Changes)if(c.Backup!=null&&File.Exists(c.Backup))File.Delete(c.Backup);}
+ public void Close(){foreach(var e in History)Cleanup(e);History.Clear();Journal();}
+ public async Task<Change> Move(string src,string dst,bool overwrite){Paths.Guard(src);Paths.Guard(dst);if(string.Equals(src,dst,StringComparison.OrdinalIgnoreCase))throw new IOException("Source and destination are the same file.");return await Task.Run(()=>{
+   string? backup=null;try{if(File.Exists(dst)){if(!overwrite)throw new IOException("Destination already exists.");backup=BackupPath();File.Copy(dst,backup);}
+    // Move without destroying source until a complete cross-volume copy exists.
+    Directory.CreateDirectory(Path.GetDirectoryName(dst)!);if(Path.GetPathRoot(src)==Path.GetPathRoot(dst))File.Move(src,dst,overwrite);else{string temp=dst+".gazegallery-"+Guid.NewGuid().ToString("N");try{File.Copy(src,temp);if(new FileInfo(temp).Length!=new FileInfo(src).Length)throw new IOException("Incomplete copy");File.Move(temp,dst,overwrite);File.Delete(src);}finally{if(File.Exists(temp))File.Delete(temp);}}
+    return new Change("move",src,dst,backup);
+   }catch{if(backup!=null&&File.Exists(backup)){if(!File.Exists(dst))File.Copy(backup,dst);File.Delete(backup);}throw;}
+  });}
+ public Task<Change> Trash(string src){Paths.Guard(src);return Sta.Run(()=>{string safety=BackupPath();File.Copy(src,safety);try{var recycled=Recycle.Send(src);if(string.IsNullOrEmpty(recycled))throw new IOException("Windows did not return a recoverable Recycle Bin item.");File.Delete(safety);return new Change("trash",src,recycled);}catch{if(!File.Exists(src))File.Copy(safety,src);File.Delete(safety);throw new IOException("Windows could not recycle this file. The original was kept; check the drive’s Recycle Bin.");}});}
+ public Task<Change> TrashFolder(string src){Paths.Guard(src);return Sta.Run(()=>{if(!Directory.Exists(src))throw new IOException("Folder no longer exists.");var recycled=Recycle.Send(src);return new Change("trash-folder",src,recycled);});}
+ public async Task<Change> Crop(string src,BitmapSource image){Paths.Guard(src);string backup=BackupPath();return await Task.Run(()=>{File.Copy(src,backup);string temp=src+".gazegallery-tmp";try{if(ExtendedImages.Supports(src))ExtendedImages.Save(image,temp,Path.GetExtension(src));else if(Path.GetExtension(src).Equals(".webp",StringComparison.OrdinalIgnoreCase))WebImages.SaveWebP(image,temp);else{BitmapEncoder enc=Path.GetExtension(src).ToLowerInvariant() switch{".png"=>new PngBitmapEncoder(),".bmp"=>new BmpBitmapEncoder(),_=>new JpegBitmapEncoder{QualityLevel=95}};enc.Frames.Add(BitmapFrame.Create(image));using(var f=File.Create(temp))enc.Save(f);}File.Move(temp,src,true);return new Change("crop",src,src,backup);}catch{if(File.Exists(temp))File.Delete(temp);File.Delete(backup);throw;}});}
+ public async Task<UndoEntry?> Undo(){if(History.Count==0)return null;var e=History[^1];foreach(var c in e.Changes.AsEnumerable().Reverse().ToArray()){
+   Paths.Guard(c.Source);if(c.Kind=="move"){Paths.Guard(c.Target);if(File.Exists(c.Source))throw new IOException("Undo stopped: original path is occupied. Rename that file before retrying.");if(!File.Exists(c.Target))throw new IOException("Moved file is missing.");await Task.Run(()=>{File.Move(c.Target,c.Source);if(c.Backup!=null)File.Copy(c.Backup,c.Target);});}
+   else if(c.Kind is "trash" or "trash-folder"){if(File.Exists(c.Source)||Directory.Exists(c.Source))throw new IOException("Undo stopped: original path is occupied.");await Sta.Run(()=>{Recycle.Restore(c.Target,c.Source);return true;});}
+   else if(c.Kind=="created-file"){await Task.Run(()=>File.Delete(c.Source));}
+   else if(c.Kind=="crop"){await Task.Run(()=>File.Copy(c.Backup!,c.Source,true));}
+   if(c.Backup!=null&&File.Exists(c.Backup))File.Delete(c.Backup);e.Changes.Remove(c);Journal();
+  }History.Remove(e);Journal();return e;}
+}
+public static class Sta {public static Task<T> Run<T>(Func<T> work){var tcs=new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);var thread=new Thread(()=>{try{tcs.SetResult(work());}catch(Exception e){tcs.SetException(e);}});thread.SetApartmentState(ApartmentState.STA);thread.IsBackground=true;thread.Start();return tcs.Task;}}
+
+// Windows shell recycling returns the exact recycled item's parsing name. Undo moves that shell item back.
+static class Recycle {
+ static Guid shellItem=new("43826D1E-E718-42EE-BC55-A1E261C37BFE");
+ [DllImport("shell32.dll",CharSet=CharSet.Unicode,PreserveSig=false)]static extern void SHCreateItemFromParsingName(string path,IntPtr context,ref Guid iid,[MarshalAs(UnmanagedType.Interface)]out IShellItem item);
+ static IShellItem Item(string p){SHCreateItemFromParsingName(p,IntPtr.Zero,ref shellItem,out var item);return item;}
+ static IFileOperation Operation(){var op=(IFileOperation)Activator.CreateInstance(Type.GetTypeFromCLSID(new Guid("3AD05575-8857-4850-9277-11B85BDB8E09"))!)!;return op;}
+ public static string LegacySend(string path){var op=Operation();var item=Item(path);var sink=new Sink();try{op.SetOperationFlags(0x40|0x00080000|0x20000000|0x00000400|0x00000010|0x00000004|0x00100000);op.DeleteItem(item,sink);op.PerformOperations();op.GetAnyOperationsAborted(out bool aborted);if(aborted||sink.Error<0)Marshal.ThrowExceptionForHR(sink.Error<0?sink.Error:unchecked((int)0x80004005));return sink.Path??throw new IOException("Recycle operation did not produce a recoverable item.");}finally{Marshal.ReleaseComObject(item);Marshal.ReleaseComObject(op);}}
+ public static string Send(string path)=>LegacySend(path);
+ public static void Restore(string recycled,string original){var op=Operation();var item=Item(recycled);var folder=Item(Path.GetDirectoryName(original)!);try{op.SetOperationFlags(0x400|0x10|0x4);op.MoveItem(item,folder,Path.GetFileName(original),null);op.PerformOperations();op.GetAnyOperationsAborted(out bool aborted);if(aborted||!File.Exists(original)&&!Directory.Exists(original))throw new IOException("Recycle Bin restore failed or item was emptied.");}finally{Marshal.ReleaseComObject(folder);Marshal.ReleaseComObject(item);Marshal.ReleaseComObject(op);}}
+ [ComImport,Guid("43826D1E-E718-42EE-BC55-A1E261C37BFE"),InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]public interface IShellItem {void BindToHandler(IntPtr pbc,ref Guid bhid,ref Guid riid,out IntPtr ppv);void GetParent(out IShellItem parent);void GetDisplayName(uint sigdn,out IntPtr name);void GetAttributes(uint mask,out uint attrs);void Compare(IShellItem other,uint hint,out int order);}
+ [ComImport,Guid("947AAB5F-0A5C-4C13-B4D6-4BF7836FC9F8"),InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]interface IFileOperation {
+ void Advise(IProgressSink sink,out uint cookie);void Unadvise(uint cookie);void SetOperationFlags(uint flags);void SetProgressMessage([MarshalAs(UnmanagedType.LPWStr)]string message);void SetProgressDialog(IntPtr dialog);void SetProperties(IntPtr props);void SetOwnerWindow(uint hwnd);void ApplyPropertiesToItem(IShellItem item);void ApplyPropertiesToItems(IntPtr items);void RenameItem(IShellItem item,[MarshalAs(UnmanagedType.LPWStr)]string name,IProgressSink? sink);void RenameItems(IntPtr items,[MarshalAs(UnmanagedType.LPWStr)]string name);void MoveItem(IShellItem item,IShellItem folder,[MarshalAs(UnmanagedType.LPWStr)]string name,IProgressSink? sink);void MoveItems(IntPtr items,IShellItem folder);void CopyItem(IShellItem item,IShellItem folder,[MarshalAs(UnmanagedType.LPWStr)]string name,IProgressSink? sink);void CopyItems(IntPtr items,IShellItem folder);void DeleteItem(IShellItem item,IProgressSink sink);void DeleteItems(IntPtr items);void NewItem(IShellItem folder,uint attrs,[MarshalAs(UnmanagedType.LPWStr)]string name,[MarshalAs(UnmanagedType.LPWStr)]string template,IProgressSink sink);void PerformOperations();void GetAnyOperationsAborted([MarshalAs(UnmanagedType.Bool)]out bool aborted);}
+ [ComVisible(true),Guid("04B0F1A7-9490-44BC-96E1-4296A31252E2"),InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]public interface IProgressSink {
+ [PreserveSig]int StartOperations();[PreserveSig]int FinishOperations(int hr);[PreserveSig]int PreRenameItem(uint flags,IShellItem item,[MarshalAs(UnmanagedType.LPWStr)]string name);[PreserveSig]int PostRenameItem(uint flags,IShellItem item,[MarshalAs(UnmanagedType.LPWStr)]string name,int hr,IShellItem? created);[PreserveSig]int PreMoveItem(uint flags,IShellItem item,IShellItem folder,[MarshalAs(UnmanagedType.LPWStr)]string name);[PreserveSig]int PostMoveItem(uint flags,IShellItem item,IShellItem folder,[MarshalAs(UnmanagedType.LPWStr)]string name,int hr,IShellItem? created);[PreserveSig]int PreCopyItem(uint flags,IShellItem item,IShellItem folder,[MarshalAs(UnmanagedType.LPWStr)]string name);[PreserveSig]int PostCopyItem(uint flags,IShellItem item,IShellItem folder,[MarshalAs(UnmanagedType.LPWStr)]string name,int hr,IShellItem? created);[PreserveSig]int PreDeleteItem(uint flags,IShellItem item);[PreserveSig]int PostDeleteItem(uint flags,IShellItem item,int hr,IShellItem? created);[PreserveSig]int PreNewItem(uint flags,IShellItem folder,[MarshalAs(UnmanagedType.LPWStr)]string name);[PreserveSig]int PostNewItem(uint flags,IShellItem folder,[MarshalAs(UnmanagedType.LPWStr)]string name,[MarshalAs(UnmanagedType.LPWStr)]string template,uint attrs,int hr,IShellItem? created);[PreserveSig]int UpdateProgress(uint total,uint done);[PreserveSig]int ResetTimer();[PreserveSig]int PauseTimer();[PreserveSig]int ResumeTimer();}
+ [ComVisible(true),ClassInterface(ClassInterfaceType.None)]public class Sink:IProgressSink {
+ public string? Path;public int Error;public int PostDeleteItem(uint f,IShellItem i,int hr,IShellItem? n){Paths.Log("recycle-callback",new{flags=f,hr,created=n!=null});Error=hr;if(n!=null){n.GetDisplayName(0x80028000,out var ptr);Path=Marshal.PtrToStringUni(ptr);Marshal.FreeCoTaskMem(ptr);}return 0;}
+ public int StartOperations()=>0;public int FinishOperations(int hr)=>0;public int PreRenameItem(uint f,IShellItem i,string n)=>0;public int PostRenameItem(uint f,IShellItem i,string n,int h,IShellItem? c)=>0;public int PreMoveItem(uint f,IShellItem i,IShellItem d,string n)=>0;public int PostMoveItem(uint f,IShellItem i,IShellItem d,string n,int h,IShellItem? c)=>0;public int PreCopyItem(uint f,IShellItem i,IShellItem d,string n)=>0;public int PostCopyItem(uint f,IShellItem i,IShellItem d,string n,int h,IShellItem? c)=>0;public int PreDeleteItem(uint f,IShellItem i){Paths.Log("recycle-preflight",new{flags=f,recyclable=(f&0x80)!=0});if((f&0x80)==0){Error=unchecked((int)0x80004004);return Error;}return 0;}public int PreNewItem(uint f,IShellItem d,string n)=>0;public int PostNewItem(uint f,IShellItem d,string n,string t,uint a,int h,IShellItem? c)=>0;public int UpdateProgress(uint t,uint d)=>0;public int ResetTimer()=>0;public int PauseTimer()=>0;public int ResumeTimer()=>0;
+ }
+}
+
+

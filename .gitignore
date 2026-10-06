@@ -1,0 +1,12 @@
+**/bin/
+**/obj/
+publish/
+plugin-build/
+runtime/
+data/
+recovery/
+temp/
+diagnostics/
+*.zip
+*.pdb
+.vs/

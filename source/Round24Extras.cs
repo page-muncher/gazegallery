@@ -1,0 +1,6 @@
+using System;using System.IO;using System.Linq;using System.Collections.Generic;using System.Windows;using System.Windows.Controls;using System.Windows.Media;using Microsoft.Win32;
+namespace gazegallery;
+public partial class MainWindow {
+ string? ResolveDestination(string path){if(Directory.Exists(path))return path;string? result=null;var w=Ui.Dialog(this,"Missing destination",650,290);var p=new StackPanel{Margin=new Thickness(16)};p.Children.Add(Ui.Label(path,12));p.Children.Add(Ui.Label("The folder you are trying to use isn't there, what to do?",14));p.Children.Add(Ui.Button("Choose another folder",()=>{var d=new OpenFolderDialog();if(d.ShowDialog(w)==true){result=d.FolderName;w.Close();}}));p.Children.Add(Ui.Button("Create missing folder and continue action",()=>{try{Paths.Guard(path);Directory.CreateDirectory(path);result=path;w.Close();}catch(Exception ex){Error(ex);}}));p.Children.Add(Ui.Button("Cancel action and clear destination",()=>{foreach(var d in Config.Destinations(Folder).Where(d=>string.Equals(d.Folder,path,StringComparison.OrdinalIgnoreCase))){d.Folder="";d.Key="";}Config.Save();w.Close();}));w.Content=p;w.ShowDialog();if(result!=null&&result!=path){foreach(var d in Config.Destinations(Folder).Where(d=>string.Equals(d.Folder,path,StringComparison.OrdinalIgnoreCase)))d.Folder=result;Config.Save();}RefreshQuickPanel();return result;}
+
+}

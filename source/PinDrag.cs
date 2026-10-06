@@ -1,0 +1,5 @@
+using System;using System.Windows;using System.Windows.Controls;using System.Windows.Input;
+namespace gazegallery;
+public partial class MainWindow {
+ void AttachPinDrag(DockPanel line,Button button,string path){Point start=default;button.PreviewMouseLeftButtonDown+=(_,e)=>start=e.GetPosition(button);button.PreviewMouseMove+=(_,e)=>{if(e.LeftButton!=MouseButtonState.Pressed||(e.GetPosition(button)-start).Length<6)return;e.Handled=true;DragDrop.DoDragDrop(button,new DataObject("gazegallery.Pin",path),DragDropEffects.Move);};line.AllowDrop=true;line.PreviewDragOver+=(_,e)=>{if(!e.Data.GetDataPresent("gazegallery.Pin"))return;e.Effects=DragDropEffects.Move;e.Handled=true;};line.PreviewDrop+=(_,e)=>{if(e.Data.GetData("gazegallery.Pin") is not string from)return;e.Handled=true;int old=Config.Pins.IndexOf(from),target=Config.Pins.IndexOf(path);if(old<0||target<0||old==target)return;Config.Pins.RemoveAt(old);Config.Pins.Insert(target,from);Config.Save();folderPanel.Visibility=Visibility.Collapsed;ShowFolders();};}
+}
