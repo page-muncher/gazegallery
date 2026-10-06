@@ -2,7 +2,7 @@
 
 A portable Windows image viewer for browsing art, sorting folders and arranging reference collages. Fast everyday navigation, still images, GIF/WebP animation and MP4/WebM playback in one window.
 
-**[Download the portable ZIP](https://github.com/page-muncher/gazegallery/releases/latest)** · [Complete feature guide](docs/Full_Guide.html) · [Quick start](docs/Readme.txt)
+**[Download the portable ZIP](https://github.com/page-muncher/gazegallery/releases/latest)**
 
 Extract the whole ZIP to a writable folder and run **gazegallery.exe**. The release includes the Windows x64 runtime and three plugins; no separate .NET installation is needed. Open the bundled Full_Guide.html in a browser for the offline three-column guide.
 
