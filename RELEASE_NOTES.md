@@ -1,11 +1,16 @@
-# gazegallery 0.37.0
+# gazegallery 0.38.0
 
-First public, GPL-3.0-or-later release of the Windows x64 portable viewer.
+- Folder timeline works independently of film strip, including while the strip auto-hides.
+- Fixed thumbnail toolbar vertical spacing and clipping.
+- Same-folder moves/copies show “Already in folder: FOLDERNAME” without changing files.
+- About includes stable GitHub update checks and a verified portable updater that preserves settings/custom plugins, backs up replaced files, rolls back installation failures and relaunches.
+- Quarter-turn viewing uses the existing image texture instead of copying the bitmap.
+- Added auto-hide for Zoom, Image Position and Film Strip; film-strip auto-hide is unavailable in shrink-image mode.
+- Restored image-sized borderless context-menu entry with right-click sizing options.
+- Quick Sort’s Trash control is clickable.
+- Collage supports custom row/column alignment and a thumbnail ordering list with drag/reorder controls.
+- Overlay right-click options stay in the existing menu cascade; toast opacity is consistent.
 
-Download the portable ZIP, extract the whole archive to a writable folder, and run `gazegallery.exe`. The runtime and Simple Draw, Wallpaper/Lock Screen and Color Picker plugins are included. `Readme.txt` and `Full_Guide.html` document the current features.
+Extract the entire portable ZIP and run gazegallery.exe. All three plugins and runtime dependencies are included. Existing users can import exported settings into a fresh extraction; future versions can use the new updater.
 
-Highlights include grid/masonry/river browsing, autoscroll and Alt previews; animated images and mpv video playback; quick-sort destinations and batch transfers; five-operation session undo; image adjustments; collage packing and JPG/PNG export; film strip, slideshow effects, metadata and histogram overlays.
-
-Validation: 248 code-level behaviour/format checks passed. No desktop testing was performed. Windows Recycle Bin round-trip verification was blocked by the restricted development shell; verify recovery with disposable files on your machine.
-
-The ZIP checksum is attached. Source, build instructions and third-party licensing notices are included. Personal media, settings and development caches are excluded.
+Validation: 279 code-level checks passed, including disposable updater installation and rollback tests. No desktop control testing was performed. Recycle Bin round-trip verification remains blocked by the restricted development shell.

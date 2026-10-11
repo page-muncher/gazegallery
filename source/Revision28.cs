@@ -21,12 +21,9 @@ public partial class MainWindow {
   lastRightClick=twice?0:now;lastRightPoint=point;
   if(twice)Run(()=>SetMode("grid"));return twice;
  }
- static void PreferRightSubmenu(MenuItem item){item.Loaded+=(_,_)=>{
-  item.ApplyTemplate();if(item.Template.FindName("PART_Popup",item) is not Popup popup)return;
-  popup.Placement=PlacementMode.Custom;
-  popup.CustomPopupPlacementCallback=(size,target,offset)=>new[]{new CustomPopupPlacement(new Point(target.Width,0),PopupPrimaryAxis.Vertical),new CustomPopupPlacement(new Point(-size.Width,0),PopupPrimaryAxis.Vertical)};
- };}
- void CenteredFolderToast(string path){Toast(path,2);toast.VerticalAlignment=VerticalAlignment.Center;toast.Margin=new Thickness(20);toast.BeginAnimation(UIElement.OpacityProperty,new DoubleAnimation(.25,1,TimeSpan.FromMilliseconds(180)){AutoReverse=false});}
+ static void PreferRightSubmenu(MenuItem item){void Place(){item.ApplyTemplate();if(item.Template.FindName("PART_Popup",item) is not Popup popup)return;popup.Placement=PlacementMode.Custom;popup.CustomPopupPlacementCallback=(size,target,offset)=>new[]{new CustomPopupPlacement(new Point(target.Width,0),PopupPrimaryAxis.Vertical),new CustomPopupPlacement(new Point(-size.Width,0),PopupPrimaryAxis.Vertical)};}item.Loaded+=(_,_)=>Place();if(item.IsLoaded)Place();}
+
+ void CenteredFolderToast(string path){Toast(path,2);toast.VerticalAlignment=VerticalAlignment.Center;toast.Margin=new Thickness(20);toast.BeginAnimation(UIElement.OpacityProperty,new DoubleAnimation(ToastOpacity38*.25,ToastOpacity38,TimeSpan.FromMilliseconds(180)){AutoReverse=false});}
  readonly StackPanel tempGridMessage=new(){HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center,MaxWidth=620,Visibility=Visibility.Collapsed};
  void SetupTempGridMessage(){foreach(var text in new[]{"This is a temp folder for drag and dropping compatability on a fresh start","It's recommended to change the startup page to start in a real folder"}){var label=Ui.Label(text,12);label.TextAlignment=TextAlignment.Center;tempGridMessage.Children.Add(label);}tempGridMessage.Children.Add(Ui.Button("Pick a folder to start in on launch",()=>{var picker=new OpenFolderDialog{Title="Pick a startup folder"};if(picker.ShowDialog(this)!=true)return;Config.StartupFolder=picker.FolderName;Config.StartupThumbnails=true;Config.Save();Run(()=>NavigateFolder(picker.FolderName));}));root.Children.Add(tempGridMessage);}
  async Task PasteBoard(){if(clipBusy||importsRunning||BoardCropItem!=null)return;clipBusy=true;try{
@@ -60,7 +57,7 @@ public partial class MainWindow {
     button.Content=content;button.HorizontalAlignment=HorizontalAlignment.Stretch;button.FontSize=11;button.HorizontalContentAlignment=HorizontalAlignment.Stretch;button.ToolTip=destination.Folder;button.PreviewMouseRightButtonUp+=(_,e)=>{e.Handled=true;EditDestination(slot);};column.Children.Add(button);
    }row.Children.Add(column);
   }outer.Children.Add(row);
-  var actions=new StackPanel{Orientation=Orientation.Horizontal};quickModeButton=Small(quickCopy?"COPY":"MOVE",ToggleQuickCopy);actions.Children.Add(quickModeButton);var tabHint=Ui.Label("Tab to swap",10);tabHint.Opacity=.4;actions.Children.Add(tabHint);var hints=Ui.Label($"Trash: {string.Join(" / ",Config.Keys["Trash"].Select(FriendlyKey))}    Undo: {string.Join(" / ",Config.Keys["Undo"].Select(FriendlyKey))}",10);hints.Opacity=.6;actions.Children.Add(hints);outer.Children.Add(actions);
+  var actions=new StackPanel{Orientation=Orientation.Horizontal};quickModeButton=Small(quickCopy?"COPY":"MOVE",ToggleQuickCopy);actions.Children.Add(quickModeButton);var tabHint=Ui.Label("Tab to swap",10);tabHint.Opacity=.4;actions.Children.Add(tabHint);var trash=Small($"Trash: {string.Join(" / ",Config.Keys["Trash"].Select(FriendlyKey))}",()=>Run(Trash));trash.FontSize=10;trash.Opacity=.6;actions.Children.Add(trash);var hints=Ui.Label($"Undo: {string.Join(" / ",Config.Keys["Undo"].Select(FriendlyKey))}",10);hints.Opacity=.6;actions.Children.Add(hints);outer.Children.Add(actions);
   var footer=new DockPanel();var once=Small("ONE-TIME",()=>{var picker=new OpenFolderDialog{InitialDirectory=DestinationStart()};if(picker.ShowDialog(this)==true)Run(()=>MoveSelection(picker.FolderName));});DockPanel.SetDock(once,Dock.Right);footer.Children.Add(once);var hint=Ui.Label("right click to set",10);hint.Opacity=.6;footer.Children.Add(hint);outer.Children.Add(footer);
   quickPanel.Child=outer;View.Cursor=Cursors.Arrow;
  }

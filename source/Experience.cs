@@ -438,13 +438,8 @@ public partial class MainWindow {
 			{
 				rotation = (rotation + 90) % 360;
 			}
-			TransformGroup transformGroup = new TransformGroup();
-			transformGroup.Children.Add(new ScaleTransform((!flipH) ? 1 : (-1), (!flipV) ? 1 : (-1)));
-			transformGroup.Children.Add(new RotateTransform(rotation));
-			TransformedBitmap transformedBitmap = new TransformedBitmap(sourceImage, transformGroup);
-			((Freezable)transformedBitmap).Freeze();
-			View.Image = transformedBitmap;
-			View.Fit();
+			View.Image = sourceImage;
+			if(imageWindow&&!fullscreen)MatchImageWindow();else View.Fit();
 		}
 	}
 
@@ -930,7 +925,7 @@ public partial class MainWindow {
 		{
 			return;
 		}
-		Point position = e.GetPosition(View);if(MotionDown32(position)){e.Handled=true;return;}if(Mode=="viewer"&&Config.SlideshowTimer&&SlideOverlay.Contains(position)){SetSlideTime();e.Handled=true;return;}if(Mode=="viewer"&&Config.ZoomIndicator&&ZoomOverlay.Contains(position)&&View.Image!=null){View.Scale=largeRaster==null?1:largeRaster.Width/(double)View.Image.PixelWidth;View.Pan=new((View.ActualWidth-View.Image.PixelWidth*View.Scale)/2,(View.ActualHeight-View.Image.PixelHeight*View.Scale)/2);View.ZoomUsed=true;View.InvalidateVisual();e.Handled=true;return;}
+		Point position = e.GetPosition(View);if(MotionDown32(position)){e.Handled=true;return;}if(Mode=="viewer"&&Config.SlideshowTimer&&SlideOverlay.Contains(position)){SetSlideTime();e.Handled=true;return;}if(Mode=="viewer"&&Config.ZoomIndicator&&ZoomOverlay.Contains(position)&&View.Image!=null){View.Scale=largeRaster==null?1:largeRaster.Width/(double)View.DisplayWidth38;View.Pan=new((View.ActualWidth-View.DisplayWidth38*View.Scale)/2,(View.ActualHeight-View.DisplayHeight38*View.Scale)/2);View.ZoomUsed=true;View.InvalidateVisual();e.Handled=true;return;}
 		Rect val;
 		if (Mode == "viewer" && Config.PositionIndicator)
 		{
@@ -1358,14 +1353,14 @@ public partial class MainWindow {
 		}
 		else if (View.Image != null)
 		{
-			(double, double) tuple = GeometryRules.Zoom(View.Image.PixelWidth, View.Image.PixelHeight, View.ActualWidth, View.ActualHeight);
-			double num2 = Math.Clamp(View.Scale * num, tuple.Item1, tuple.Item2 * ((largeRaster == null) ? 1.0 : ((double)largeRaster.Width / (double)View.Image.PixelWidth)));
+			(double, double) tuple = GeometryRules.Zoom(View.DisplayWidth38, View.DisplayHeight38, View.ActualWidth, View.ActualHeight);
+			double num2 = Math.Clamp(View.Scale * num, tuple.Item1, tuple.Item2 * ((largeRaster == null) ? 1.0 : ((double)largeRaster.Width / (double)View.DisplayWidth38)));
 			num = num2 / View.Scale;
 			if (e.Delta < 0)
 			{
 				double num3 = View.ActualWidth / 2.0;
 				double num4 = View.ActualHeight / 2.0;
-				View.Pan = new Vector(num3 + (View.Pan.X + (double)View.Image.PixelWidth * View.Scale / 2.0 - num3) * num * num - (double)View.Image.PixelWidth * num2 / 2.0, num4 + (View.Pan.Y + (double)View.Image.PixelHeight * View.Scale / 2.0 - num4) * num * num - (double)View.Image.PixelHeight * num2 / 2.0);
+				View.Pan = new Vector(num3 + (View.Pan.X + (double)View.DisplayWidth38 * View.Scale / 2.0 - num3) * num * num - (double)View.DisplayWidth38 * num2 / 2.0, num4 + (View.Pan.Y + (double)View.DisplayHeight38 * View.Scale / 2.0 - num4) * num * num - (double)View.DisplayHeight38 * num2 / 2.0);
 			}
 			else
 			{
