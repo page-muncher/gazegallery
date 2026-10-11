@@ -14,7 +14,8 @@ using System.Windows.Media.Imaging;
 namespace gazegallery;
 
 public static class Paths {
- public static readonly string Root = Path.GetFullPath(AppContext.BaseDirectory);
+ public static string ResolveRoot(string baseDirectory,string? processPath) => Path.GetFullPath(processPath!=null&&Path.GetFileName(processPath).Equals("gazegallery.exe",StringComparison.OrdinalIgnoreCase)?Path.GetDirectoryName(processPath)!:baseDirectory);
+ public static readonly string Root = ResolveRoot(AppContext.BaseDirectory,Environment.ProcessPath);
  public static readonly string DevelopmentRoot=Directory.Exists(Path.Combine(Root,"..","source"))?Path.GetFullPath(Path.Combine(Root,"..")):Root;
  public static readonly string Test = Path.Combine(DevelopmentRoot,"TestFiles");
  public static readonly string Data = Environment.GetCommandLineArgs().Any(a=>a is "--verify" or "--playback-check" or "--smoke")?Path.Combine(Root,"diagnostics","test-profile"):Path.Combine(Root,"data");

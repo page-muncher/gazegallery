@@ -35,7 +35,7 @@ public sealed class Video : IDisposable {
  [StructLayout(LayoutKind.Sequential)]struct Property {public IntPtr Name;public int Format;public IntPtr Data;}
  [UnmanagedFunctionPointer(CallingConvention.Cdecl)]delegate void RenderCallback(IntPtr context);
  const string Dll="libmpv-2.dll";
- static Video(){NativeLibrary.SetDllImportResolver(typeof(Video).Assembly,(name,assembly,search)=>name==Dll?NativeLibrary.Load(File.Exists(Path.Combine(AppContext.BaseDirectory,"runtime",Dll))?Path.Combine(AppContext.BaseDirectory,"runtime",Dll):Path.Combine(AppContext.BaseDirectory,Dll)):IntPtr.Zero);}
+ static Video(){NativeLibrary.SetDllImportResolver(typeof(Video).Assembly,(name,assembly,search)=>name==Dll?NativeLibrary.Load(File.Exists(Path.Combine(Paths.Root,"runtime",Dll))?Path.Combine(Paths.Root,"runtime",Dll):Path.Combine(Paths.Root,Dll),assembly,DllImportSearchPath.UseDllDirectoryForDependencies|DllImportSearchPath.SafeDirectories):IntPtr.Zero);}
  [DllImport(Dll,CallingConvention=CallingConvention.Cdecl)]static extern IntPtr mpv_get_property_string(IntPtr h,[MarshalAs(UnmanagedType.LPUTF8Str)]string name);
  [DllImport(Dll,CallingConvention=CallingConvention.Cdecl)]static extern void mpv_free(IntPtr value);
  [DllImport(Dll,CallingConvention=CallingConvention.Cdecl)]static extern IntPtr mpv_create();

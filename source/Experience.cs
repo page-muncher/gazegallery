@@ -103,7 +103,7 @@ public partial class MainWindow {
 		}
 	}
 
-	public static string TempFolder => System.IO.Path.Combine(AppContext.BaseDirectory, "temp");
+	public static string TempFolder => System.IO.Path.Combine(Paths.Root, "temp");
 
 	private void SetupExperience()
 	{
