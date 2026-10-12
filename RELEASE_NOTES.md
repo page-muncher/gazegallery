@@ -1,13 +1,11 @@
-# gazegallery 0.39.0
+# gazegallery 0.39.1
 
-- Thumbnail toolbar now uses compact Display, Navigation and Actions menus, retaining Folders/View mode on the left and To top/Fade Away on the right. Fixed fullscreen toolbar vertical padding in thumbnail and collage modes.
-- Arrow keys navigate thumbnails spatially in Grid, Masonry and River, with wrapping and automatic reveal. Enter opens the focused image or folder; Ctrl+Space toggles selection. Focus is distinct from selection and selected/focused thumbnails receive a stronger highlight. Space controls autoscroll without activating toolbar controls.
-- Space on a still image starts a slideshow, then pauses/resumes it. Animated media retains playback controls outside slideshows. Shift+G toggles folder timeline.
-- Filmstrip follows the presented filename and reconciles changed file positions after moves/rescans instead of highlighting a stale index. Older overlapping folder scans cannot replace newer results.
-- Right-click Image-sized borderless reliably opens Window fits image / Image fits window choices.
-- Set ordering shows numbered thumbnail/filename rows and suppresses the collage toolbar/fullscreen exit while the dialog is open, including during dragging.
-- Removed unnecessary separators from Diagnostics and Navigation Arrows overlay menus.
+- Fixed fullscreen thumbnail/collage toolbar spacing: symmetric padding across all groups and wrapped rows; removed fullscreen resize chrome that could clip the upper edge.
+- Masonry Left/Right always targets the immediately adjacent column, choosing the nearest vertical center and wrapping at the edges.
+- Returning to thumbnails gives the last viewed image keyboard focus without selecting it. Enter opens the focused image; the mode-switch hotkey returns to the last viewed image. Dashed focus outlines are 4 px thick at 50% opacity; selected focus remains brighter.
+- Thumbnail-to-view entry now uses an explicit file target, dismisses preview/drag state, and completes viewport layout before fitting and handing off the zoom transition. Added lifecycle and rendered-pixel checks after the transition completes.
+- Doubled collage Set ordering previews to 96 x 76.
 
-Validation: 304 basic format/behavior checks pass; app/checks build with zero warnings/errors. Portable native decoder and ZIP/source/runtime/plugin integrity checks completed. No desktop/control testing was performed. Guides unchanged for this feedback round.
+Validation: app/checks build without warnings/errors; code-level checks include offscreen rendered toolbar geometry and thumbnail/view lifecycle. Native portable decoder, archive, source, runtime and plugin integrity checks completed. No desktop/control testing. Guides unchanged.
 
-Extract the complete portable ZIP or use About > Check for updates > Update to latest from version 0.38.1 or newer. User settings are retained by the updater. Version 0.38.0 requires a one-time manual repair because its original updater resolves the wrong installation folder.
+Extract the complete portable ZIP or use About > Check for updates > Update to latest from version 0.38.1 or newer. The updater preserves user settings. Version 0.38.0 requires a one-time manual repair due to its original installation-path bug.

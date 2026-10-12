@@ -317,7 +317,7 @@ public partial class MainWindow {
 		treeResize.Visibility = ((!flag) ? Visibility.Collapsed : Visibility.Visible);
 		treeResize.Margin = new Thickness(Math.Max(0.0, num - 3.0), 0.0, 0.0, 0.0);
 		View.Margin = new Thickness(num, 0.0, 0.0, FilmstripInset33);
-		toolbar.Margin = new Thickness(0,4,0,4);
+		toolbar.Margin = new Thickness(0);
 		folderPanel.Margin = new Thickness(0.0, 0.0, 0.0, 0.0);
 		RefreshTreeHeader();ResponsiveToolbar();View.UpdateLayout();
 		if (Mode == "grid")
@@ -411,12 +411,12 @@ public partial class MainWindow {
  if(Mode=="grid"){BuildGridToolbar39();}
  else if(Mode=="board"){toolbar.Children.Add(Ui.Button("Open another viewer",LaunchCompanion));toolbar.Children.Add(Ui.Button("Select All",()=>{ToggleBoardSelection();}));toolbar.Children.Add(Ui.Button("Equal area",NormalizeBoard));toolbar.Children.Add(Ui.Button("Pack",PackBoard));toolbar.Children.Add(Ui.Button("Gap Size",GapMenu));toolbar.Children.Add(Ui.Button("Export",()=>Run(ExportBoard)));toolbar.Children.Add(Ui.Button("Clear",ClearBoard));Ui.Check(toolbar,"Respect aspect ratio",Config.RespectAspect,v=>{Config.RespectAspect=v;Config.Save();});}
  AddLatestToolbar();PanelLayout();ResponsiveToolbar();View.InvalidateVisual();}
- public async Task SetMode(string mode){if(mode=="grid"&&!hasFolder){Directory.CreateDirectory(TempFolder);await NavigateFolder(TempFolder);return;}if(mode==Mode&&!GridLoading)return;if(!LeaveBoard())return;EndPluginOverlay();if(Cropping)CancelCrop();string previous=Mode;PrepareReverse36(previous,mode);if(previous=="grid"&&mode=="viewer"&&SelectedGridImages().Length==1)viewerReturn=SelectedGridImages()[0];if(mode=="viewer")ClearGridHoles();if(previous=="viewer"&&mode=="grid")viewerReturn=current;
+ public async Task SetMode(string mode){if(mode=="grid"&&!hasFolder){Directory.CreateDirectory(TempFolder);await NavigateFolder(TempFolder);return;}if(mode==Mode&&!GridLoading)return;if(!LeaveBoard())return;EndPluginOverlay();if(Cropping)CancelCrop();string previous=Mode;if(previous=="grid"&&mode!="grid"){ResetAlt36();exportCandidate=dragging=false;dragFiles=null;View.ReleaseMouseCapture();}PrepareReverse36(previous,mode);if(mode=="viewer")ClearGridHoles();if(previous=="viewer"&&mode=="grid")viewerReturn=current;
  int token=++modeTransition;navigatingTree=false;PauseScroll();if(mode=="board"){Quick=false;quickPanel.Visibility=Visibility.Collapsed;}Mode=mode;GridLoading=mode=="grid";GridMetadataLoading=mode=="grid";View.ToolTip=null;View.HoverTile=-1;generation++;thumbGeneration++;playerPanel.Visibility=Visibility.Collapsed;BuildModeToolbar();
- if(mode=="grid"){await StopVideo();if(token!=modeTransition)return;View.Image=null;sourceImage=null;await PrepareGrid();if(token!=modeTransition)return;GridLoading=false;View.Selected.Clear();View.LayoutTiles();int index=GridPaths.IndexOf(current??"");if(index>=0&&index<View.Tiles.Count){View.Anchor=index;View.Scroll=Math.Max(0,View.GridStart35(View.Tiles[index])-(Config.River?14:ToolbarHeight));FlashThumbnail(index);}}
+ if(mode=="grid"){await StopVideo();if(token!=modeTransition)return;View.Image=null;sourceImage=null;await PrepareGrid();if(token!=modeTransition)return;GridLoading=false;View.Selected.Clear();View.LayoutTiles();int index=GridPaths.IndexOf(current??"");if(index>=0&&index<View.Tiles.Count){KeyboardTile39=index;View.Anchor=index;View.Scroll=Math.Max(0,View.GridStart35(View.Tiles[index])-(Config.River?14:ToolbarHeight));FlashThumbnail(index,false);}}
  else if(mode=="board"){await StopVideo();if(token!=modeTransition)return;View.Image=null;sourceImage=null;boardLimit=50;View.BoardScale=1;View.BoardPan=new(50,80);}
- else{GridLoading=false;if(viewerReturn!=null&&Files.Contains(viewerReturn))Index=Files.IndexOf(viewerReturn);viewerReturn=null;if(hasFolder)await ShowIndex(Index,false);else await Empty();}
- if(token!=modeTransition)return;FinishReverse36(previous,mode);if(previous=="grid"&&mode=="viewer")ArmThumbnailReturn35();else if(mode!="viewer")thumbnailReturn35=null;View.Focus();View.InvalidateVisual();}
+ else{GridLoading=false;root.UpdateLayout();if(viewerReturn!=null&&Files.Contains(viewerReturn))Index=Files.IndexOf(viewerReturn);viewerReturn=null;if(hasFolder)await ShowIndex(Index,false);else await Empty();}
+ if(token!=modeTransition)return;if(mode=="viewer"&&View.Image!=null){root.UpdateLayout();if(!View.ZoomUsed)FitViewer33();}FinishReverse36(previous,mode);if(previous=="grid"&&mode=="viewer")ArmThumbnailReturn35();else if(mode!="viewer")thumbnailReturn35=null;View.Focus();View.InvalidateVisual();}
 
 	private void ApplyTransform(string action)
 	{
@@ -1404,7 +1404,7 @@ public partial class MainWindow {
 			{
 				return;
 			}
-			string key = exitAlias?"Escape":KeyName(e);if(!Cropping&&BoardCropItem==null&&ThumbnailKeys39(pressedKey,Keyboard.Modifiers,e.IsRepeat)){e.Handled=true;return;}if(TimelineKey39(key)){e.Handled=true;return;}if(Mode=="viewer"&&!Quick&&!Cropping&&pressedKey==Key.Space&&Keyboard.Modifiers==ModifierKeys.None){if(!e.IsRepeat)ViewerSpace39();e.Handled=true;return;}if(Round31Key(key)){e.Handled=true;return;}if(Mode=="board"&&pressedKey==Key.Enter){ToggleFullscreen();e.Handled=true;return;}if(Mode=="board"&&key=="Ctrl+A"){ToggleBoardSelection();e.Handled=true;return;}if(Mode=="grid"&&!Quick&&key=="W"){if(SelectedGridImages().Length==1)Run(()=>SetMode("viewer"));e.Handled=true;return;}if(Mode=="grid"&&key=="Ctrl+A"){ToggleSelectAll();e.Handled=true;return;}if(Quick&&pressedKey==Key.Tab){if(!e.IsRepeat)ToggleQuickCopy();e.Handled=true;return;}
+			string key = exitAlias?"Escape":KeyName(e);if(!Cropping&&BoardCropItem==null&&ThumbnailKeys39(pressedKey,Keyboard.Modifiers,e.IsRepeat)){e.Handled=true;return;}if(TimelineKey39(key)){e.Handled=true;return;}if(Mode=="viewer"&&!Quick&&!Cropping&&pressedKey==Key.Space&&Keyboard.Modifiers==ModifierKeys.None){if(!e.IsRepeat)ViewerSpace39();e.Handled=true;return;}if(Round31Key(key)){e.Handled=true;return;}if(Mode=="board"&&pressedKey==Key.Enter){ToggleFullscreen();e.Handled=true;return;}if(Mode=="board"&&key=="Ctrl+A"){ToggleBoardSelection();e.Handled=true;return;}if(Mode=="grid"&&!Quick&&key=="W"){if(SelectedGridImages().Length==1)Run(()=>EnterThumbnailView35(GridPaths.IndexOf(SelectedGridImages()[0])));e.Handled=true;return;}if(Mode=="grid"&&key=="Ctrl+A"){ToggleSelectAll();e.Handled=true;return;}if(Quick&&pressedKey==Key.Tab){if(!e.IsRepeat)ToggleQuickCopy();e.Handled=true;return;}
 			if (Mode == "grid" && !Quick)
 			{
 				if (Config.Keys["Autoscroll thumbnails"].Contains(key))
