@@ -19,7 +19,7 @@ public partial class MainWindow {
  void HandleViewerRightClick(Point point){
   bool overlay=Mode=="viewer"&&(Config.Arrows&&(View.Arrow(true).Contains(point)||View.Arrow(false).Contains(point))||Config.ZoomIndicator&&ZoomOverlay.Contains(point)||Config.SlideshowTimer&&SlideOverlay.Contains(point)||Config.PositionIndicator&&PositionOverlay.Contains(point));
   if(overlay){lastRightClick=0;
-   if(Config.Arrows&&(View.Arrow(true).Contains(point)||View.Arrow(false).Contains(point))){var menu=new ContextMenu();CloseOverlayMenu(menu,()=>Config.Arrows=false);menu.IsOpen=true;}
+   if(Config.Arrows&&(View.Arrow(true).Contains(point)||View.Arrow(false).Contains(point))){var menu=new ContextMenu();CloseOverlayMenu(menu,()=>Config.Arrows=false,separator:false);menu.IsOpen=true;}
    else if(Config.ZoomIndicator&&ZoomOverlay.Contains(point))FitMenu();
    else if(Config.SlideshowTimer&&SlideOverlay.Contains(point))SlideshowMenu();else PositionContext();return;
   }

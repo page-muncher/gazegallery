@@ -5,7 +5,7 @@ public partial class MainWindow {
  void ToggleBoardSelection(){if(View.BoardSelection.SetEquals(View.Board))View.BoardSelection.Clear();else View.BoardSelection=View.Board.ToHashSet();View.InvalidateVisual();}
  public void SelectGridTile(int index,bool control=false,bool shift=false){
   if(index<0||index>=GridPaths.Count||GridHoles.Contains(GridPaths[index])||index==0&&IsFolderTile(index))return;
-  bool folder=IsFolderTile(index);bool same=View.Selected.All(i=>IsFolderTile(i)==folder);if(!same){View.Selected.Clear();View.Anchor=index;}
+  KeyboardTile39=index;bool folder=IsFolderTile(index);bool same=View.Selected.All(i=>IsFolderTile(i)==folder);if(!same){View.Selected.Clear();View.Anchor=index;}
   if(shift&&same){int anchor=View.Anchor;if(anchor<0||anchor>=GridPaths.Count||IsFolderTile(anchor)!=folder)anchor=index;View.Selected.Clear();for(int i=Math.Min(index,anchor);i<=Math.Max(index,anchor);i++)if(IsFolderTile(i)==folder&&!(i==0&&folder)&&!GridHoles.Contains(GridPaths[i]))View.Selected.Add(i);}
   else if(control){if(!View.Selected.Add(index))View.Selected.Remove(index);View.Anchor=index;}
   else {View.Selected.Clear();View.Selected.Add(index);View.Anchor=index;}

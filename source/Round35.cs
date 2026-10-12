@@ -11,7 +11,7 @@ public sealed class BookmarkStore35 {
 public partial class MainWindow {
  BookmarkStore35 bookmarks35=new(Path.Combine(Paths.Data,"bookmarks.json"));int bookmarkCount35;string? thumbnailReturn35;bool altPeekHeld35;DateTime transitionStart35;BitmapSource? transitionImage35;Rect transitionFrom35;int transitionGeneration35;string? presentedPath35,videoPath35,animationPath35;
  public bool FilmstripCanPresent35=>Mode=="viewer"&&!Operations.Busy&&!preparingImage33&&!bufferingVideo&&presentedPath35==current;
- void MarkPresented35(string? path){if(path==current)presentedPath35=path;}
+ void MarkPresented35(string? path){if(path!=current||path==null)return;int position=Files.IndexOf(path);if(position<0)return;presentedPath35=path;Index=position;if(!Operations.Busy)strip.Present39(path);}
  public string ThumbnailLayoutName35=>Config.River?"River":Config.Masonry?"Masonry":"Grid";
  void SetupRound35(){Config.Keys.Remove("Sort mode");foreach(var list in Config.MenuLayouts.Values)list.RemoveAll(x=>x=="Sort mode"||x=="Borderless windowed");}
  void CycleLayout35(){string previous=ThumbnailLayoutName35;Config.River=previous=="Masonry";Config.Masonry=previous=="Grid";if(Config.River)Config.Masonry=false;PauseScroll();View.Scroll=0;ClearGridHoles();Config.Save();BuildModeToolbar();View.LayoutTiles();}
