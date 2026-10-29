@@ -1,11 +1,14 @@
-# gazegallery 0.40.0
+# gazegallery 0.41.0
 
-- Unselected thumbnail keyboard-focus outlines are now 65% opaque and 3 px thick, removing one inward pixel while keeping the outer edge in place. Selected-image highlights are unchanged.
-- Held-arrow navigation waits two seconds when wrapping between the first and last image files. Ordinary row/column wrapping and separate key presses stay immediate. Releasing the arrow or switching away resets the wait.
-- The configured thumbnail-mode hotkey now works in collage, using the existing leave confirmation and returning focus to the image that started the collage.
-- Ctrl+F opens and focuses the thumbnail filter. If it is already open, the same input is focused and selected instead of opening another popup. The shortcut can be changed in Bindings.
-- Video duration appears after file size in the default viewer title: mm:ss, or h:mm:ss for hour-long videos. Video duration can be disabled or reordered in Title bar settings.
+- Quick Sort preserves an already-hidden cursor. Up/Down starts keyboard destination highlighting, skips unset slots, wraps, and Enter uses the selected destination in the current Move/Copy mode.
+- Thumbnail copy, trash, Quick Sort and C-to-collage use explicit image selections first, falling back to the dotted-focus image when nothing is selected.
+- Held-arrow thumbnail navigation stops at wrap boundaries. Release and press again to wrap. Existing scrolling/autoscroll timing is unchanged.
+- Short Space presses toggle slideshow/playback on release. Holding Space for half a second ends the slideshow without first starting or pausing it.
+- Slideshow options now separate End Slideshow from Close Overlay; closing the timer alone leaves playback running.
+- Minus/plus (including the number pad) increase/decrease thumbnail counts using existing column/row limits.
+- Multiple files opened together from Explorer are grouped into a new collage. Single-file opening remains a normal viewer. Supports both multi-argument launches and closely spaced separate Explorer processes.
+- Space accepts the collage Unload and leave confirmation.
 
-Validation: 344 basic checks pass; app/checks build with zero warnings/errors. Checks cover end-wrap timing, outline opacity/geometry, title formatting/toggles, collage-origin restoration and existing thumbnail/view lifecycle. Packaged video decoding and ZIP/source/runtime/plugin integrity verified. No desktop/control testing. Guides unchanged.
+Validation: 351 code-level checks passed, with zero build warnings/errors. Separate headless processes verified launch aggregation and single-file isolation; portable native-video decoding and archive integrity verified. The existing Windows Recycle Bin folder-undo roundtrip was blocked by an OS item-lookup failure (0x80070002); recycling code is unchanged. No desktop testing. Guides unchanged.
 
-Extract the complete portable ZIP or use About > Check for updates > Update to latest from version 0.38.1 or newer. The updater preserves user settings. Version 0.38.0 requires a one-time manual repair due to its original installation-path bug.
+Use About > Check for updates > Update to latest from 0.38.1 or newer, or extract the complete release archive. User settings are preserved by the updater.

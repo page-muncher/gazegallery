@@ -38,7 +38,7 @@ public partial class MainWindow {
   View.InvalidateVisual();Toast($"Added clipboard image — {View.Board.Count}/{boardLimit} images");
  }catch(Exception ex){Error(ex);}finally{clipBusy=false;}}
  public void ToggleQuick(){
-  if(Mode=="board"||Cropping)return;Quick=!Quick;quickPanel.Visibility=Quick?Visibility.Visible:Visibility.Collapsed;if(!Quick)return;
+  if(Mode=="board"||Cropping)return;CancelSpace42();quickRows42.Clear();quickFocus42=-1;Quick=!Quick;quickPanel.Visibility=Quick?Visibility.Visible:Visibility.Collapsed;if(!Quick)return;
   quickPanel.Background=new SolidColorBrush(Color.FromArgb(230,34,38,42));
   var destinations=Config.Destinations(Folder);var outer=new StackPanel{Margin=new Thickness(4)};
   Button Small(string label,Action click){var button=Ui.FlatButton(label,click);if(label is "ONE-TIME" or "◂" or "▸" or "×")button.Tag=null;button.FontSize=10;button.Padding=new Thickness(4,2,4,2);button.Margin=new Thickness(1);return button;}
@@ -54,11 +54,11 @@ public partial class MainWindow {
    for(int i=group*10;i<group*10+10;i++){int slot=i;var destination=destinations[i];var button=Small("",()=>{if(string.IsNullOrEmpty(destination.Folder))EditDestination(slot);else Run(()=>QuickTransfer(destination.Folder));});
     var content=new Grid();content.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(30)});content.ColumnDefinitions.Add(new ColumnDefinition());
     content.Children.Add(new TextBlock{Text=FriendlyKey(destination.Key),Foreground=Ui.Fg});var label=new TextBlock{Text=string.IsNullOrEmpty(destination.Folder)?"Set destination…":Path.GetFileName(destination.Folder.TrimEnd('\\')),Foreground=Ui.Fg,TextTrimming=TextTrimming.CharacterEllipsis};Grid.SetColumn(label,1);content.Children.Add(label);
-    button.Content=content;button.HorizontalAlignment=HorizontalAlignment.Stretch;button.FontSize=11;button.HorizontalContentAlignment=HorizontalAlignment.Stretch;button.ToolTip=destination.Folder;button.PreviewMouseRightButtonUp+=(_,e)=>{e.Handled=true;EditDestination(slot);};column.Children.Add(button);
+    button.Content=content;button.HorizontalAlignment=HorizontalAlignment.Stretch;button.FontSize=11;button.HorizontalContentAlignment=HorizontalAlignment.Stretch;button.ToolTip=destination.Folder;button.PreviewMouseRightButtonUp+=(_,e)=>{e.Handled=true;EditDestination(slot);};column.Children.Add(button);if(!string.IsNullOrEmpty(destination.Folder))quickRows42.Add((destination,button));
    }row.Children.Add(column);
   }outer.Children.Add(row);
   var actions=new StackPanel{Orientation=Orientation.Horizontal};quickModeButton=Small(quickCopy?"COPY":"MOVE",ToggleQuickCopy);actions.Children.Add(quickModeButton);var tabHint=Ui.Label("Tab to swap",10);tabHint.Opacity=.4;actions.Children.Add(tabHint);var trash=Small($"Trash: {string.Join(" / ",Config.Keys["Trash"].Select(FriendlyKey))}",()=>Run(Trash));trash.FontSize=10;trash.Opacity=.6;actions.Children.Add(trash);var hints=Ui.Label($"Undo: {string.Join(" / ",Config.Keys["Undo"].Select(FriendlyKey))}",10);hints.Opacity=.6;actions.Children.Add(hints);outer.Children.Add(actions);
   var footer=new DockPanel();var once=Small("ONE-TIME",()=>{var picker=new OpenFolderDialog{InitialDirectory=DestinationStart()};if(picker.ShowDialog(this)==true)Run(()=>MoveSelection(picker.FolderName));});DockPanel.SetDock(once,Dock.Right);footer.Children.Add(once);var hint=Ui.Label("right click to set",10);hint.Opacity=.6;footer.Children.Add(hint);outer.Children.Add(footer);
-  quickPanel.Child=outer;View.Cursor=Cursors.Arrow;
+  quickPanel.Child=outer;quickPointer42=Mouse.GetPosition(root);quickPanel.ForceCursor=View.Cursor==Cursors.None;quickPanel.Cursor=quickPanel.ForceCursor?Cursors.None:null;
  }
 }

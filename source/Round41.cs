@@ -1,29 +1,10 @@
 using System;using System.Linq;using System.Collections.Generic;using System.Threading.Tasks;using System.Windows;using System.Windows.Controls;using System.Windows.Controls.Primitives;using System.Windows.Input;
 namespace gazegallery;
-// Key repeats are delayed only when physically wrapping between the collection's two end files.
-public sealed class ArrowWrapDelay41 {
- Key key;int from=-1,to=-1;double began;
- public void Reset(){from=to=-1;key=Key.None;}
- public bool Wait(Key direction,int source,int target,bool repeat,bool endWrap,double now){
-  if(!repeat||!endWrap){Reset();return false;}
-  if(key!=direction||from!=source||to!=target){key=direction;from=source;to=target;began=now;}
-  if(now-began<2)return true;Reset();return false;
- }
- public static bool EndWrap(IReadOnlyList<Rect> tiles,int source,int target,Key direction,int first,int last){
-  if(source<0||target<0||source>=tiles.Count||target>=tiles.Count||first==last)return false;
-  if(!((source==first&&target==last)||(source==last&&target==first)))return false;
-  bool horizontal=direction is Key.Left or Key.Right;int sign=direction is Key.Left or Key.Up?-1:1;
-  double Center(Rect r)=>horizontal?r.X+r.Width/2:r.Y+r.Height/2;
-  return (Center(tiles[target])-Center(tiles[source]))*sign < -1;
- }
-}
 public partial class MainWindow {
- readonly ArrowWrapDelay41 arrowWrap41=new();Popup? filterPopup41;string lastDurationTitle41="";
+ Popup? filterPopup41;string lastDurationTitle41="";
  void NavigateKeyboard41(Key key,bool repeat){
   int source=KeyboardTile39,target=ThumbnailNavigation39.Next(View.Tiles,source,key,i=>i<GridPaths.Count&&!GridHoles.Contains(GridPaths[i]));
-  var files=Enumerable.Range(FolderTileCount,Math.Max(0,GridPaths.Count-FolderTileCount)).Where(i=>!GridHoles.Contains(GridPaths[i])).ToArray();
-  bool loop=files.Length>1&&ArrowWrapDelay41.EndWrap(View.Tiles,source,target,key,files[0],files[^1]);
-  if(arrowWrap41.Wait(key,source,target,repeat,loop,Environment.TickCount64/1000d))return;
+  if(source>=0&&target>=0&&source<View.Tiles.Count&&target<View.Tiles.Count){bool horizontal=key is Key.Left or Key.Right;double Center(Rect r)=>horizontal?r.X+r.Width/2:r.Y+r.Height/2;int sign=key is Key.Left or Key.Up?-1:1;if(repeat&&(Center(View.Tiles[target])-Center(View.Tiles[source]))*sign< -1)return;}
   KeyboardTile39=target;if(target>=0){View.Anchor=target;View.Reveal(target);}View.Focus();
  }
  bool FilterKey41(Key key,ModifierKeys mods)=>Mode=="grid"&&Config.Keys.TryGetValue("Filter thumbnails",out var keys)&&keys.Any(k=>NormalizeKey(k).Equals(NormalizeKey((mods.HasFlag(ModifierKeys.Control)?"Ctrl+":"")+(mods.HasFlag(ModifierKeys.Shift)?"Shift+":"")+(mods.HasFlag(ModifierKeys.Alt)?"Alt+":"")+key),StringComparison.OrdinalIgnoreCase));
