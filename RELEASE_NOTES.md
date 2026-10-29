@@ -1,14 +1,9 @@
-# gazegallery 0.41.0
+# gazegallery 0.41.1
 
-- Quick Sort preserves an already-hidden cursor. Up/Down starts keyboard destination highlighting, skips unset slots, wraps, and Enter uses the selected destination in the current Move/Copy mode.
-- Thumbnail copy, trash, Quick Sort and C-to-collage use explicit image selections first, falling back to the dotted-focus image when nothing is selected.
-- Held-arrow thumbnail navigation stops at wrap boundaries. Release and press again to wrap. Existing scrolling/autoscroll timing is unchanged.
-- Short Space presses toggle slideshow/playback on release. Holding Space for half a second ends the slideshow without first starting or pausing it.
-- Slideshow options now separate End Slideshow from Close Overlay; closing the timer alone leaves playback running.
-- Minus/plus (including the number pad) increase/decrease thumbnail counts using existing column/row limits.
-- Multiple files opened together from Explorer are grouped into a new collage. Single-file opening remains a normal viewer. Supports both multi-argument launches and closely spaced separate Explorer processes.
-- Space accepts the collage Unload and leave confirmation.
+- Dotted thumbnail focus now leaves a 1 px hollow gap around the image container, retaining its 3 px stroke and 65% opacity. Selected-image highlighting is unchanged.
+- The thumbnail hotkey (default Z) opens thumbnails from view/collage mode. In thumbnails, it goes up one folder; at a drive root it stays put. Collage still uses the existing leave confirmation.
+- Trashing a focused thumbnail moves focus to the next surviving image, or the previous image if it was last. Focus survives folder rescans and skips deleted placeholders, preventing arrow navigation from restarting at the top.
 
-Validation: 351 code-level checks passed, with zero build warnings/errors. Separate headless processes verified launch aggregation and single-file isolation; portable native-video decoding and archive integrity verified. The existing Windows Recycle Bin folder-undo roundtrip was blocked by an OS item-lookup failure (0x80070002); recycling code is unchanged. No desktop testing. Guides unchanged.
+Validation: 358 code-level checks passed; app/checks build without warnings/errors. Offscreen outline geometry, thumbnail navigation, focus continuity and packaged video decoding verified. No desktop testing. The existing Windows Recycle Bin undo roundtrip remains excluded after the OS item-lookup failure recorded in 0.41.0; recycling code is unchanged. Guides unchanged.
 
-Use About > Check for updates > Update to latest from 0.38.1 or newer, or extract the complete release archive. User settings are preserved by the updater.
+Update through About > Check for updates > Update to latest, or extract the complete portable release archive. The updater preserves settings.
