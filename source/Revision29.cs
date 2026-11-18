@@ -11,6 +11,7 @@ public partial class MainWindow {
  bool CanContextAction(string name){
   if(name is "Open file with external program" or "Open with")return ExternalActionImage!=null;
   if(Mode=="board")return true;
+  if(Mode=="grid"&&name=="Collage")return true;
   if(name is "Save as" or "Copy" or "Trash" or "Crop" or "Rename" or "Flip horizontal" or "Flip vertical" or "Rotate 90°" or "Collage"){
    if(Mode=="grid"&&name=="Trash"&&SelectedGridFolders().Length>0)return true;
    return current!=null||Mode=="grid"&&SelectedGridImages().Length>0;

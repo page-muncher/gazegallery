@@ -132,23 +132,9 @@ public partial class MainWindow {
 		cropPanel.HorizontalAlignment = System.Windows.HorizontalAlignment.Right;
 		cropPanel.VerticalAlignment = VerticalAlignment.Bottom;
 		cropPanel.Margin = new Thickness(20.0);
-		StackPanel stackPanel = new StackPanel
-		{
-			Orientation = System.Windows.Controls.Orientation.Horizontal
-		};
-		stackPanel.HorizontalAlignment=HorizontalAlignment.Right;AddEditControls(stackPanel);AddCropRatios(stackPanel);Ui.Check(stackPanel,"Allow overcropping (Uses canvas color)",Config.CropFillOutside,v=>{Config.CropFillOutside=v;Config.Save();ConstrainViewerCrop();});
-		stackPanel.Children.Add(Ui.Button("Cancel", CancelCrop));
-		stackPanel.Children.Add(Ui.Button("Save as copy", () =>
-		{
-			Run(SaveCropCopy);
-		}));
-		stackPanel.Children.Add(Ui.Button("Apply and save", () =>
-		{
-			Run(ApplyCrop);
-		}));
-		cropPanel.Child = stackPanel;
 		cropPanel.Visibility = Visibility.Collapsed;
 		root.Children.Add(cropPanel);
+		View.SizeChanged += (_, _) => ResizeViewerCropToolbar();
 		Grid grid = new Grid
 		{
 			Margin = new Thickness(7.0)
@@ -412,8 +398,10 @@ public partial class MainWindow {
  else if(Mode=="board"){toolbar.Children.Add(Ui.Button("Open another viewer",LaunchCompanion));toolbar.Children.Add(Ui.Button("Select All",()=>{ToggleBoardSelection();}));toolbar.Children.Add(Ui.Button("Equal area",NormalizeBoard));toolbar.Children.Add(Ui.Button("Pack",PackBoard));toolbar.Children.Add(Ui.Button("Gap Size",GapMenu));toolbar.Children.Add(Ui.Button("Export",()=>Run(ExportBoard)));toolbar.Children.Add(Ui.Button("Clear",ClearBoard));Ui.Check(toolbar,"Respect aspect ratio",Config.RespectAspect,v=>{Config.RespectAspect=v;Config.Save();});}
  AddLatestToolbar();PanelLayout();ResponsiveToolbar();View.InvalidateVisual();}
  public async Task SetMode(string mode){if(mode=="grid"&&!hasFolder){Directory.CreateDirectory(TempFolder);await NavigateFolder(TempFolder);return;}if(mode==Mode&&!GridLoading)return;if(!LeaveBoard())return;if(Mode=="board"&&mode=="grid")RestoreCollageOrigin41();EndPluginOverlay();if(Cropping)CancelCrop();string previous=Mode;if(previous=="grid"&&mode!="grid"){ResetAlt36();exportCandidate=dragging=false;dragFiles=null;View.ReleaseMouseCapture();}PrepareReverse36(previous,mode);if(mode=="viewer")ClearGridHoles();if(previous=="viewer"&&mode=="grid")viewerReturn=current;
- int token=++modeTransition;navigatingTree=false;PauseScroll();if(mode=="board"){Quick=false;quickPanel.Visibility=Visibility.Collapsed;}Mode=mode;GridLoading=mode=="grid";GridMetadataLoading=mode=="grid";View.ToolTip=null;View.HoverTile=-1;generation++;thumbGeneration++;playerPanel.Visibility=Visibility.Collapsed;BuildModeToolbar();
- if(mode=="grid"){await StopVideo();if(token!=modeTransition)return;View.Image=null;sourceImage=null;await PrepareGrid();if(token!=modeTransition)return;GridLoading=false;View.Selected.Clear();View.LayoutTiles();int index=GridPaths.IndexOf(current??"");if(index>=0&&index<View.Tiles.Count){KeyboardTile39=index;View.Anchor=index;View.Scroll=Math.Max(0,View.GridStart35(View.Tiles[index])-(Config.River?14:ToolbarHeight));FlashThumbnail(index,false);}}
+ int token=++modeTransition;navigatingTree=false;PauseScroll();if(mode=="board"){Quick=false;quickPanel.Visibility=Visibility.Collapsed;}Mode=mode;GridLoading=mode=="grid";GridMetadataLoading=mode=="grid";View.ToolTip=null;View.HoverTile=-1;generation++;thumbGeneration++;playerPanel.Visibility=Visibility.Collapsed;
+ if(mode=="grid"){QueueThumbnailArrival(current,flash:previous=="viewer",fallBack:true);KeyboardTile39=-1;}else CancelThumbnailArrival();
+ BuildModeToolbar();
+ if(mode=="grid"){await StopVideo();if(token!=modeTransition)return;View.Image=null;sourceImage=null;await PrepareGrid();if(token!=modeTransition)return;GridLoading=false;View.LayoutTiles();TryRevealThumbnailArrival();}
  else if(mode=="board"){await StopVideo();if(token!=modeTransition)return;View.Image=null;sourceImage=null;boardLimit=50;View.BoardScale=1;View.BoardPan=new(50,80);}
  else{GridLoading=false;root.UpdateLayout();if(viewerReturn!=null&&Files.Contains(viewerReturn))Index=Files.IndexOf(viewerReturn);viewerReturn=null;if(hasFolder)await ShowIndex(Index,false);else await Empty();}
  if(token!=modeTransition)return;if(mode=="viewer"&&View.Image!=null){root.UpdateLayout();if(!View.ZoomUsed)FitViewer33();}FinishReverse36(previous,mode);if(previous=="grid"&&mode=="viewer")ArmThumbnailReturn35();else if(mode!="viewer")thumbnailReturn35=null;View.Focus();View.InvalidateVisual();}
@@ -445,23 +433,6 @@ public partial class MainWindow {
 
 	private void StartCrop()
 	{
-
-
-		StackPanel stackPanel = new StackPanel
-		{
-			Orientation = System.Windows.Controls.Orientation.Horizontal
-		};
-		stackPanel.HorizontalAlignment=HorizontalAlignment.Right;AddEditControls(stackPanel);AddCropRatios(stackPanel);Ui.Check(stackPanel,"Allow overcropping (Uses canvas color)",Config.CropFillOutside,v=>{Config.CropFillOutside=v;Config.Save();ConstrainViewerCrop();});
-		stackPanel.Children.Add(Ui.Button("Cancel", CancelCrop));
-		stackPanel.Children.Add(Ui.Button("Save as copy", () =>
-		{
-			Run(SaveCropCopy);
-		}));
-		stackPanel.Children.Add(Ui.Button("Apply and save", () =>
-		{
-			Run(ApplyCrop);
-		}));
-		var editTools=new WrapPanel{HorizontalAlignment=HorizontalAlignment.Right};while(stackPanel.Children.Count>0){var child=stackPanel.Children[0];stackPanel.Children.RemoveAt(0);editTools.Children.Add(child);}cropPanel.Child=editTools;cropPanel.MaxWidth=Math.Max(240,ActualWidth-40);
 		if (current != null && !Paths.Motion(current) && !(Mode != "viewer"))
 		{
 			if (largeRaster != null)
@@ -479,6 +450,7 @@ public partial class MainWindow {
 			View.Image = sourceImage ?? View.Image;
 			cropOriginal = sourceImage;
 			View.Fit();
+			BuildViewerCropToolbar();
 			Cropping = true;BeginEditing();
 			View.CropRect = Rect.Empty;
 			cropPanel.Visibility = Visibility.Visible;
@@ -666,7 +638,8 @@ public partial class MainWindow {
 	private async Task Paste()
 	{
 		if(Mode=="board"){await PasteBoard();return;}
-		if (clipBusy || Mode != "viewer" || Quick || Cropping)
+		bool pasteInThumbnails = Mode == "grid";
+		if (clipBusy || !pasteInThumbnails && Mode != "viewer" || !pasteInThumbnails && Quick || Cropping)
 		{
 			return;
 		}
@@ -687,6 +660,8 @@ public partial class MainWindow {
 				((Freezable)bitmap).Freeze();
 			}
 			string dir = (hasFolder ? Folder : TempFolder);
+			int pasteTransition = modeTransition;
+			int pasteArrivalRevision = thumbnailFlashRevision;
 			Directory.CreateDirectory(dir);
 			List<string> outputs = new List<string>();
 			string[] array2 = array;
@@ -717,8 +692,25 @@ public partial class MainWindow {
 			}
 			if (outputs.Count > 0)
 			{
-				await Open(outputs[0]);
-				CleanupTemp(current);
+				if (pasteInThumbnails)
+				{
+					if (Mode == "grid" && pasteTransition == modeTransition && dir == Folder)
+					{
+						await Scan();
+						if (Mode == "grid" && pasteTransition == modeTransition && dir == Folder)
+						{
+							if (pasteArrivalRevision == thumbnailFlashRevision &&
+								GridPaths.Contains(outputs[0], StringComparer.OrdinalIgnoreCase))
+								QueueThumbnailArrival(outputs[0]);
+							await PrepareGrid();
+						}
+					}
+				}
+				else
+				{
+					await Open(outputs[0]);
+					CleanupTemp(current);
+				}
 				Toast($"Pasted {outputs.Count} file(s)");
 			}
 		}
@@ -1374,7 +1366,7 @@ public partial class MainWindow {
 
 	private void KeyDownHandler(object sender, System.Windows.Input.KeyEventArgs e)
 	{
- if(Ui.IsCancelKey(e)&&Ui.DismissMenus()){e.Handled=true;return;}if(ThumbnailAlt35(e,true))return;bool exitAlias=Ui.IsExitAlias(e);Key pressedKey=exitAlias?Key.Escape:e.Key;if(exitAlias)e.Handled=true;
+ if(Ui.IsCancelKey(e)&&Ui.DismissMenus()){e.Handled=true;return;}if(ThumbnailAlt35(e,true))return;bool exitAlias=Ui.IsExitAlias(e);Key pressedKey=exitAlias?Key.Escape:InputKey(e);if(exitAlias)e.Handled=true;
 
 
 
@@ -1404,7 +1396,21 @@ public partial class MainWindow {
 			{
 				return;
 			}
-			string key = exitAlias?"Escape":KeyName(e);if(Mode=="grid"&&key=="Ctrl+C"){if(!e.IsRepeat)CopyGridFiles();e.Handled=true;return;}if(!Cropping&&BoardCropItem==null&&(QuickKeys42(pressedKey)||ThumbnailExtraKeys42(pressedKey,Keyboard.Modifiers,e.IsRepeat))){e.Handled=true;return;}if(!Cropping&&BoardCropItem==null&&ThumbnailKeys39(pressedKey,Keyboard.Modifiers,e.IsRepeat)){e.Handled=true;return;}if(TimelineKey39(key)){e.Handled=true;return;}if(Mode=="viewer"&&!Quick&&!Cropping&&pressedKey==Key.Space&&Keyboard.Modifiers==ModifierKeys.None){if(!e.IsRepeat)BeginSpace42();e.Handled=true;return;}if(Round31Key(key)){e.Handled=true;return;}if(Mode=="board"&&pressedKey==Key.Enter){ToggleFullscreen();e.Handled=true;return;}if(Mode=="board"&&key=="Ctrl+A"){ToggleBoardSelection();e.Handled=true;return;}if(Mode=="grid"&&!Quick&&key=="W"){if(SelectedGridImages().Length==1)Run(()=>EnterThumbnailView35(GridPaths.IndexOf(SelectedGridImages()[0])));e.Handled=true;return;}if(Mode=="grid"&&key=="Ctrl+A"){ToggleSelectAll();e.Handled=true;return;}if(Quick&&pressedKey==Key.Tab){if(!e.IsRepeat)ToggleQuickCopy();e.Handled=true;return;}
+			if (Mode == "grid" && (KeyName(e) == "Ctrl+V" || Config.Keys["Paste"].Contains(KeyName(e))))
+			{
+				if (!e.IsRepeat) Run(Paste);
+				e.Handled = true;
+				return;
+			}
+			string key = exitAlias?"Escape":KeyName(e);
+			var modifiers = Keyboard.Modifiers;
+			if (HandleFullscreenKey(key, e.IsRepeat) ||
+			    BoardCropItem == null && HandleViewerTransformKey(pressedKey, modifiers))
+			{
+				e.Handled = true;
+				return;
+			}
+			if(Mode=="grid"&&key=="Ctrl+C"){if(!e.IsRepeat)CopyGridFiles();e.Handled=true;return;}if(!Cropping&&BoardCropItem==null&&(modifiers==ModifierKeys.None&&QuickKeys42(pressedKey)||ThumbnailExtraKeys42(pressedKey,Keyboard.Modifiers,e.IsRepeat))){e.Handled=true;return;}if(!Cropping&&BoardCropItem==null&&ThumbnailKeys39(pressedKey,Keyboard.Modifiers,e.IsRepeat)){e.Handled=true;return;}if(TimelineKey39(key)){e.Handled=true;return;}if(Mode=="viewer"&&!Quick&&!Cropping&&pressedKey==Key.Space&&Keyboard.Modifiers==ModifierKeys.None){if(!e.IsRepeat)BeginSpace42();e.Handled=true;return;}if(Round31Key(key)){e.Handled=true;return;}if(Mode=="board"&&key=="Ctrl+A"){ToggleBoardSelection();e.Handled=true;return;}if(Mode=="grid"&&!Quick&&key=="W"){if(SelectedGridImages().Length==1)Run(()=>EnterThumbnailView35(GridPaths.IndexOf(SelectedGridImages()[0])));e.Handled=true;return;}if(Mode=="grid"&&key=="Ctrl+A"){ToggleSelectAll();e.Handled=true;return;}if(Quick&&pressedKey==Key.Tab){if(!e.IsRepeat)ToggleQuickCopy();e.Handled=true;return;}
 			if (Mode == "grid" && !Quick)
 			{
 				if (Config.Keys["Autoscroll thumbnails"].Contains(key))
@@ -1472,6 +1478,11 @@ public partial class MainWindow {
 				{
 					e.Handled = true;
 				}
+				return;
+			}
+			if (pressedKey == Key.Enter)
+			{
+				e.Handled = true;
 				return;
 			}
 			if(CollageThumbnailKey41(key)){if(!e.IsRepeat)Run(CollageThumbnails41);e.Handled=true;return;}

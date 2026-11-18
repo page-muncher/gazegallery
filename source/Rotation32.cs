@@ -8,7 +8,49 @@ public sealed class RotationRuler32:FrameworkElement {
 }
 public partial class MainWindow {
  readonly System.Collections.Generic.Dictionary<int,Slider> editSliders32=new();RotationRuler32? rotationRuler;TextBox? rotationNumber;double rotationBase;bool rotationSync;bool motionLineMode,motionLineDragging;Point motionStart,motionEnd;
- void AddRotation32(Panel panel){var row=new WrapPanel{VerticalAlignment=VerticalAlignment.Center};rotationRuler=new RotationRuler32{Width=260,Margin=new Thickness(4)};rotationNumber=Ui.Input("0");rotationNumber.Width=55;rotationNumber.VerticalContentAlignment=VerticalAlignment.Center;rotationNumber.Margin=new Thickness(4);rotationRuler.ValueChanged+=(_,_)=>{if(rotationSync)return;editAngle=rotationBase+rotationRuler.Value;EnsureRotationCrop32();rotationSync=true;rotationNumber.Text=editAngle.ToString("0.#",CultureInfo.InvariantCulture);rotationSync=false;View.InvalidateVisual();};rotationNumber.TextChanged+=(_,_)=>{if(!rotationSync&&double.TryParse(rotationNumber.Text,NumberStyles.Float,CultureInfo.InvariantCulture,out var value))SetEditAngle32(value);};row.Children.Add(rotationRuler);row.Children.Add(rotationNumber);row.Children.Add(Ui.Label("°",11));row.Children.Add(Ui.Button("↺",()=>SetEditAngle32(0)));row.Children.Add(Ui.Button("90° clockwise",()=>SetEditAngle32(editAngle+90)));panel.Children.Insert(1,row);}
+ FrameworkElement CreateRotationControls32()
+ {
+     var row = new WrapPanel { VerticalAlignment = VerticalAlignment.Center };
+     var ruler = new RotationRuler32 { Width = 260, Margin = new Thickness(4) };
+     var angle = Ui.Input("0");
+     angle.Width = 55;
+     angle.VerticalContentAlignment = VerticalAlignment.Center;
+     angle.VerticalAlignment = VerticalAlignment.Center;
+     angle.Margin = new Thickness(4);
+     rotationRuler = ruler;
+     rotationNumber = angle;
+
+     ruler.ValueChanged += (_, _) =>
+     {
+         if (rotationSync)
+             return;
+         editAngle = rotationBase + ruler.Value;
+         EnsureRotationCrop32();
+         rotationSync = true;
+         angle.Text = editAngle.ToString("0.#", CultureInfo.InvariantCulture);
+         rotationSync = false;
+         View.InvalidateVisual();
+     };
+     angle.TextChanged += (_, _) =>
+     {
+         if (!rotationSync && double.TryParse(angle.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var value))
+             SetEditAngle32(value);
+     };
+
+     var degrees = Ui.Label("°", 11);
+     degrees.VerticalAlignment = VerticalAlignment.Center;
+     var reset = Ui.Button("↺", () => SetEditAngle32(0));
+     reset.ToolTip = "Reset rotation";
+     reset.VerticalAlignment = VerticalAlignment.Center;
+     var clockwise = Ui.Button("90° clockwise", () => SetEditAngle32(editAngle + 90));
+     clockwise.VerticalAlignment = VerticalAlignment.Center;
+     row.Children.Add(ruler);
+     row.Children.Add(angle);
+     row.Children.Add(degrees);
+     row.Children.Add(clockwise);
+     row.Children.Add(reset);
+     return row;
+ }
  void SetEditAngle32(double value){editAngle=(value%360+540)%360-180;rotationBase=Math.Round(editAngle/90)*90;EnsureRotationCrop32();rotationSync=true;if(rotationRuler!=null)rotationRuler.Value=editAngle-rotationBase;if(rotationNumber!=null&&!rotationNumber.IsKeyboardFocused)rotationNumber.Text=editAngle.ToString("0.#",CultureInfo.InvariantCulture);rotationSync=false;View.InvalidateVisual();}
  void EnsureRotationCrop32(){if(Cropping&&View.Image!=null&&View.CropRect.IsEmpty)View.CropRect=new Rect(0,0,View.Image.PixelWidth,View.Image.PixelHeight);}
  public void DrawEditImage32(DrawingContext dc,bool dim){if(View.Image==null)return;var r=View.ImageRect;dc.PushTransform(new RotateTransform(editAngle,r.X+r.Width/2,r.Y+r.Height/2));if(dim&&!AdjustmentsOpen)dc.PushOpacity(.6);dc.DrawImage(View.Image,r);if(dim&&!AdjustmentsOpen)dc.Pop();dc.Pop();}

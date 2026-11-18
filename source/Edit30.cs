@@ -21,7 +21,6 @@ public static class ImageAdjustments {
 public partial class MainWindow {
  double[] editValues=new double[ImageAdjustments.Names.Length];double editAngle;bool editFlipH,editFlipV;int editEpoch,editSession;BitmapSource? editPreviewSource;
  void BeginEditing(){editEpoch++;int session=++editSession;editValues=new double[ImageAdjustments.Names.Length];editAngle=rotationBase=0;motionLineMode=motionLineDragging=false;editFlipH=editFlipV=false;editPreviewSource=null;var source=sourceImage;if(source==null)return;_=Task.Run(async()=>{var small=await Sta.Run(()=>ImageAdjustments.PreviewSource(source));await Dispatcher.InvokeAsync(()=>{if(Cropping&&session==editSession){editPreviewSource=small;QueueEditPreview();}});});}
- void AddEditControls(Panel panel){panel.Children.Insert(0,Ui.Button("Adjust image…",EditAdjustments));AddRotation32(panel);}
  Window? adjustmentWindow;bool editRendering;
  void EditAdjustments(){if(adjustmentWindow!=null){adjustmentWindow.Activate();return;}var window=Ui.Dialog(this,"Image adjustments",540,650);window.WindowStartupLocation=WindowStartupLocation.Manual;window.Left=Left+14;window.Top=Math.Max(0,Top+(ActualHeight-window.Height)/2);adjustmentWindow=window;editSliders32.Clear();AdjustmentsOpen=true;View.InvalidateVisual();var panel=new StackPanel{Margin=new Thickness(14)};var resets=new System.Collections.Generic.List<Action>();bool resetting=false;
  void Changed(){if(!resetting)QueueEditPreview();}

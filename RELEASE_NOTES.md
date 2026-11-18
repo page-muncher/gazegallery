@@ -1,9 +1,9 @@
-# gazegallery 0.41.1
+# gazegallery 0.42.0
 
-- Dotted thumbnail focus now leaves a 1 px hollow gap around the image container, retaining its 3 px stroke and 65% opacity. Selected-image highlighting is unchanged.
-- The thumbnail hotkey (default Z) opens thumbnails from view/collage mode. In thumbnails, it goes up one folder; at a drive root it stays put. Collage still uses the existing leave confirmation.
-- Trashing a focused thumbnail moves focus to the next surviving image, or the previous image if it was last. Focus survives folder rescans and skips deleted placeholders, preventing arrow navigation from restarting at the top.
+- Thumbnail arrivals use dotted focus. Returning from View flashes briefly, and moving focus with an arrow key clears the flash. In large folders, To top focuses the first tile and prevents the previous image from pulling the view back while thumbnails load.
+- Plain Enter opens the focused thumbnail or folder. Shift+Enter or Alt+Enter toggles fullscreen in View, Thumbnails, and Collage. In View, hold Shift and an arrow to pan, or use Ctrl+Up/Down and `=`/`-` for 5% zoom steps.
+- Paste from Ctrl+V or the thumbnail Actions menu to save clipboard content into the current folder and stay in thumbnails.
+- Start a collage from selected thumbnails or start empty. Set ordering has larger previews and up/down arrows on every row. The default export name joins up to three letters or digits per image in collage order, capped at 30 characters.
+- View crop editing puts Adjust image on the left, rotation in the center, and crop options on the right. Save actions sit at the bottom-right. Hide cropping UI leaves your crop outline and handles available.
 
-Validation: 358 code-level checks passed; app/checks build without warnings/errors. Offscreen outline geometry, thumbnail navigation, focus continuity and packaged video decoding verified. No desktop testing. The existing Windows Recycle Bin undo roundtrip remains excluded after the OS item-lookup failure recorded in 0.41.0; recycling code is unchanged. Guides unchanged.
-
-Update through About > Check for updates > Update to latest, or extract the complete portable release archive. The updater preserves settings.
+The update is available through About → Check for updates → Update to latest.

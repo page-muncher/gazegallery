@@ -25,7 +25,7 @@ public partial class MainWindow {
   if(key is Key.Left or Key.Right or Key.Up or Key.Down){PauseScroll();if(KeyboardTile39<0&&View.Selected.Count==1)KeyboardTile39=View.Selected.Single();NavigateKeyboard41(key,repeat);return true;}
   if(key==Key.Space&&mods.HasFlag(ModifierKeys.Control)){if(!repeat&&KeyboardTile39>=0&&KeyboardTile39<GridPaths.Count&&!(IsFolderTile(KeyboardTile39)&&KeyboardTile39==0)){int i=KeyboardTile39;bool folder=IsFolderTile(i);View.Selected.RemoveWhere(j=>IsFolderTile(j)!=folder);if(!View.Selected.Remove(i))View.Selected.Add(i);View.InvalidateVisual();}return true;}
   if(key==Key.Space&&mods==ModifierKeys.None){if(!repeat)ToggleAutoscroll();View.Focus();return true;}
-  if(key==Key.Enter&&KeyboardTile39>=0&&KeyboardTile39<GridPaths.Count){int i=KeyboardTile39;if(IsFolderTile(i))Run(()=>NavigateFolder(GridPaths[i]));else Run(()=>EnterThumbnailView35(i));return true;}return false;
+  if(key==Key.Enter&&mods==ModifierKeys.None&&!repeat&&KeyboardTile39>=0&&KeyboardTile39<GridPaths.Count&&!GridHoles.Contains(GridPaths[KeyboardTile39])){int i=KeyboardTile39;if(IsFolderTile(i))Run(()=>NavigateFolder(GridPaths[i]));else Run(()=>EnterThumbnailView35(i));return true;}return false;
  }
  public void DrawKeyboardFocus39(DrawingContext dc){int i=KeyboardTile39;if(i<0||i>=View.Tiles.Count)return;var tile=View.ScreenTile35(View.Tiles[i]);if(View.Selected.Contains(i)){dc.PushOpacity(.17);dc.DrawRoundedRectangle(Ui.Selection,null,tile,6,6);dc.Pop();}bool selected=View.Selected.Contains(i);if(!selected){tile.Inflate(2.5,2.5);dc.PushOpacity(.65);}dc.DrawRoundedRectangle(null,new Pen(Ui.Selection,selected?4:3){DashStyle=selected?DashStyles.Solid:DashStyles.Dash},tile,6,6);if(!selected)dc.Pop();}
  void Category39(string name,Action<ContextMenu> populate){var button=Ui.Button(name+" ▾",()=>{});button.Click+=(_,_)=>{var menu=new ContextMenu{PlacementTarget=button,Placement=PlacementMode.Bottom};populate(menu);menu.IsOpen=true;};toolbar.Children.Add(button);}
@@ -33,7 +33,7 @@ public partial class MainWindow {
  void BuildGridToolbar39(){
   Category39("Display",m=>{Choice39(m,"Layout: "+ThumbnailLayoutName35,CycleLayout35);Choice39(m,"Names",ToggleNames,Config.Names);Choice39(m,"Subfolders",()=>{Config.ShowSubfolders=!Config.ShowSubfolders;Config.Save();RebuildGridPaths();View.Scroll=0;View.LayoutTiles();},Config.ShowSubfolders);Choice39(m,"Sort…",SortMenu);Choice39(m,"Filter…",()=>OpenFilter36(toolbar.Children.OfType<Button>().First()));Choice39(m,"Zoom in",()=>ColumnStep(-1));Choice39(m,"Zoom out",()=>ColumnStep(1));});
   Category39("Navigation",m=>{Choice39(m,autoScroll?"Stop autoscroll":"Start autoscroll",ToggleAutoscroll);Choice39(m,"Scroll speed…",SetScrollSpeed);Choice39(m,"To bottom",ToBottom);});
-  Category39("Actions",m=>{Choice39(m,"Select all / deselect all",ToggleSelectAll);Choice39(m,"Move selected",ToggleQuick);Choice39(m,"Create new folder",CreateSubfolder);});
+  Category39("Actions",m=>{Choice39(m,"Select all / deselect all",ToggleSelectAll);Choice39(m,"Move selected",ToggleQuick);Choice39(m,"Paste",()=>Run(Paste));Choice39(m,"Create new folder",CreateSubfolder);});
  }
  static MenuItem? BorderlessEntry39(object source){var node=source as DependencyObject;while(node!=null){if(node is MenuItem item&&Equals(item.Tag,"borderless-options"))return item;node=node is Visual?VisualTreeHelper.GetParent(node):LogicalTreeHelper.GetParent(node);}return null;}
  void SetupKeys39(){SetupRound41();if(!Config.Keys.ContainsKey("Folder timeline"))Config.Keys["Folder timeline"]=new[]{"Shift+G"};}

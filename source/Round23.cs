@@ -5,22 +5,23 @@ public partial class MainWindow {
  public int GridLayoutCount {get{if((!Config.Masonry&&!Config.River)||!GridMetadataLoading)return GridPaths.Count;int n=FolderTileCount;while(n<GridPaths.Count&&GridRatios.ContainsKey(GridPaths[n]))n++;return n;}}
  static Dictionary<string,double> ReadGridRatios(string[] paths){var result=new System.Collections.Concurrent.ConcurrentDictionary<string,double>(StringComparer.OrdinalIgnoreCase);Task.WhenAll(paths.Select(async path=>{using var permit=await LoaderPool.Acquire();result[path]=await Task.Run(()=>{try{if(VideoThumbnails.IsVideo(path))return 1d;if(ExtendedImages.Supports(path))return ExtendedImages.Ratio(path);using var codec=SkiaSharp.SKCodec.Create(path);return codec==null?1:codec.Info.Height/(double)Math.Max(1,codec.Info.Width);}catch{return 1d;}});})).GetAwaiter().GetResult();return new Dictionary<string,double>(result,StringComparer.OrdinalIgnoreCase);}
  async Task PrepareProgressiveGrid(){
-  int preparation=++gridPreparation,token=modeTransition;string folder=Folder;GridMetadataLoading=true;RebuildGridPaths();var paths=GridPaths.Skip(FolderTileCount).ToArray();View.LayoutTiles();
+  int preparation=++gridPreparation,token=modeTransition;string folder=Folder;GridMetadataLoading=true;RebuildGridPaths();var paths=GridPaths.Skip(FolderTileCount).Where(path=>!GridRatios.ContainsKey(path)).ToArray();View.LayoutTiles();TryRevealThumbnailArrival();
+  bool IsCurrent()=>preparation==gridPreparation&&token==modeTransition&&folder==Folder&&Mode=="grid";
   // Publish small batches, adapting to slow storage. Append geometry without relaying out existing rows.
-  int first=Math.Min(paths.Length,Math.Max(16,Array.IndexOf(paths,current??"")+1));
+  int first=Math.Min(paths.Length,16);
   var initial=await Task.Run(()=>ReadGridRatios(paths.Take(first).ToArray()));
-  if(preparation!=gridPreparation||token!=modeTransition||folder!=Folder)return;
-  foreach(var pair in initial)GridRatios[pair.Key]=pair.Value;GridLoading=false;View.AppendTiles();PreloadThumbs();
+  if(!IsCurrent())return;
+  foreach(var pair in initial)GridRatios[pair.Key]=pair.Value;GridLoading=false;View.AppendTiles();TryRevealThumbnailArrival();PreloadThumbs();
   if(first>=paths.Length){GridMetadataLoading=false;return;}
   Run(async()=>{try{int batchSize=32;for(int i=first;i<paths.Length;){
-   if(preparation!=gridPreparation||token!=modeTransition||folder!=Folder||Mode!="grid")return;
+   if(!IsCurrent())return;
    int take=Math.Min(batchSize,paths.Length-i);var clock=System.Diagnostics.Stopwatch.StartNew();
    var batch=await Task.Run(()=>ReadGridRatios(paths.Skip(i).Take(take).ToArray()));
-   if(preparation!=gridPreparation||token!=modeTransition||folder!=Folder||Mode!="grid")return;
-   foreach(var pair in batch)GridRatios[pair.Key]=pair.Value;View.AppendTiles();PreloadThumbs();i+=take;
+   if(!IsCurrent())return;
+   foreach(var pair in batch)GridRatios[pair.Key]=pair.Value;View.AppendTiles();TryRevealThumbnailArrival();PreloadThumbs();i+=take;
    batchSize=clock.ElapsedMilliseconds>200?4:clock.ElapsedMilliseconds<30?64:16;
    await Task.Delay(8);
-  }}finally{if(preparation==gridPreparation&&token==modeTransition){GridMetadataLoading=false;View.AppendTiles();}}});
+  }}finally{if(IsCurrent()){GridMetadataLoading=false;View.AppendTiles();TryRevealThumbnailArrival();}}});
  }
  public static Rect ClampCropArea(Rect area,BitmapSource source){if(area.IsEmpty)return Rect.Empty;return Rect.Intersect(area,new Rect(0,0,source.PixelWidth,source.PixelHeight));}
  static BitmapSource CropWithinImage(BitmapSource source,Rect area){var clipped=ClampCropArea(area,source);if(clipped.IsEmpty)throw new IOException("Crop must overlap the image");int x=(int)Math.Floor(clipped.Left),y=(int)Math.Floor(clipped.Top),right=Math.Min(source.PixelWidth,(int)Math.Ceiling(clipped.Right)),bottom=Math.Min(source.PixelHeight,(int)Math.Ceiling(clipped.Bottom));var result=new CroppedBitmap(source,new Int32Rect(x,y,Math.Max(1,right-x),Math.Max(1,bottom-y)));result.Freeze();return result;}
