@@ -19,16 +19,16 @@ public partial class MainWindow:Window {
  public Settings Config;public ImageCache Cache;public readonly Telemetry Stats=new();public Surface View=new();public List<string> Files=new();public string Mode="viewer",Folder=Paths.Test;public int Index,VisibleTiles;public bool Cropping,Quick;public FileOperations Operations=new();
  Grid root=new();Border quickPanel=new();WrapPanel toolbar=new(){Orientation=Orientation.Horizontal};TextBlock toast=new();Graph graph=new();Border folderPanel=new();Video? video;WriteableBitmap? videoFrame;bool videoActive,shutdown,currentMotion;int generation;long navigation;string? current;string[] ordered=Array.Empty<string>();bool shuffled;FileSystemWatcher? watcher;CancellationTokenSource? scanDebounce;SemaphoreSlim transition=new(1);Dictionary<string,BitmapSource> thumbResult=new();Dictionary<string,int> thumbPending=new(StringComparer.OrdinalIgnoreCase);int thumbGeneration;DateTime pointerTime=DateTime.Now,toastTime;DispatcherTimer tick=new(DispatcherPriority.Render){Interval=TimeSpan.FromMilliseconds(16)};Stopwatch clock=Stopwatch.StartNew();TimeSpan lastRender;bool diagnostic;Point press,last;bool dragging,exportCandidate;string[]? dragFiles;bool fullscreen;WindowState priorState;
  public string? Current=>current;
- public MainWindow(string? start=null,string[]? launchFiles=null){Config=Settings.Load();LoaderPool.Limit=Config.LoaderThreads;ApplyPalette();Config.Volume=Math.Clamp(Config.DefaultVolume,0,100);Icon=Branding.Icon();Cache=new(Config.CacheMB*1048576L);Title="gazegallery";Width=1200;Height=820;MinWidth=300;MinHeight=400;Background=Ui.Bg;Foreground=Ui.Fg;WindowStartupLocation=WindowStartupLocation.CenterScreen;AllowDrop=true;View.Host=this;graph.Host=this;
+ public MainWindow(string? start=null,Task<string[]?>? launchBatch=null){Config=Settings.Load();LoaderPool.Limit=Config.LoaderThreads;ApplyPalette();Config.Volume=Math.Clamp(Config.DefaultVolume,0,100);Icon=Branding.Icon();Cache=new(Config.CacheMB*1048576L);Title="gazegallery";Width=1200;Height=820;MinWidth=300;MinHeight=400;Background=Ui.Bg;Foreground=Ui.Fg;WindowStartupLocation=WindowStartupLocation.CenterScreen;AllowDrop=true;View.Host=this;graph.Host=this;
   root.Children.Add(View);toolbar.VerticalAlignment=VerticalAlignment.Top;toolbar.Background=new SolidColorBrush(Color.FromArgb(244,32,35,39));toolbar.Height=62;toolbar.Visibility=Visibility.Collapsed;root.Children.Add(toolbar);
   quickPanel.HorizontalAlignment=HorizontalAlignment.Left;quickPanel.VerticalAlignment=VerticalAlignment.Bottom;quickPanel.Margin=new Thickness(18,0,0,24);quickPanel.Background=new SolidColorBrush(Color.FromArgb(245,36,39,43));quickPanel.BorderBrush=Brushes.DimGray;quickPanel.BorderThickness=new Thickness(1);quickPanel.CornerRadius=new CornerRadius(6);quickPanel.Visibility=Visibility.Collapsed;root.Children.Add(quickPanel);
   folderPanel.HorizontalAlignment=HorizontalAlignment.Left;folderPanel.VerticalAlignment=VerticalAlignment.Stretch;folderPanel.Margin=new Thickness(0,62,0,0);folderPanel.Width=290;folderPanel.Background=Ui.Bg;folderPanel.Visibility=Visibility.Collapsed;root.Children.Add(folderPanel);
   toast.HorizontalAlignment=HorizontalAlignment.Center;toast.VerticalAlignment=VerticalAlignment.Bottom;toast.Margin=new Thickness(10,0,10,18);toast.Padding=new Thickness(12,8,12,8);toast.Background=new SolidColorBrush(Color.FromArgb(230,35,42,47));toast.Foreground=Ui.Fg;toast.Visibility=Visibility.Collapsed;root.Children.Add(toast);
   graph.Width=320;graph.Height=240;graph.Margin=new Thickness(12,12,12,0);graph.HorizontalAlignment=HorizontalAlignment.Left;graph.VerticalAlignment=VerticalAlignment.Top;graph.Visibility=Visibility.Collapsed;graph.IsHitTestVisible=true;graph.MouseRightButtonUp+=(_,e)=>{var menu=new ContextMenu();CloseOverlayMenu(menu,()=>{diagnostic=false;graph.Visibility=Visibility.Collapsed;},separator:false);menu.IsOpen=true;e.Handled=true;};root.Children.Add(graph);
-  Content=root;PreviewKeyDown+=KeyDownHandler;PreviewKeyUp+=(_,e)=>{ReleaseKeyboardPan(InputKey(e));if(e.Key==Key.Space&&spaceDown42){ReleaseSpace42();e.Handled=true;return;}if(ThumbnailAlt35(e,false))return;if(e.Key==scrollHeldKey)scrollKey=0;};Deactivated+=(_,_)=>{scrollKey=0;StopKeyboardPan();};View.MouseDown+=MouseDownHandler;View.MouseMove+=MouseMoveHandler;View.MouseUp+=MouseUpHandler;View.MouseWheel+=WheelHandler;View.MouseRightButtonUp+=(_,e)=>{HandleViewerRightClick(e.GetPosition(View));e.Handled=true;};DragOver+=DragHover;Drop+=ReceiveDrop;SetupExperience();SetupPlugins();SetupRound24();SetupRound30();SetupRound34();SetupRound35();SetupRound36();SetupRound38();SetupRound42();
+  Content=root;PreviewMouseDown+=ThumbnailFolderBack;PreviewKeyDown+=KeyDownHandler;PreviewKeyUp+=(_,e)=>{ReleaseKeyboardPan(InputKey(e));if(e.Key==Key.Space&&spaceDown42){ReleaseSpace42();e.Handled=true;return;}if(ThumbnailAlt35(e,false))return;if(e.Key==scrollHeldKey)scrollKey=0;};Deactivated+=(_,_)=>{scrollKey=0;StopKeyboardPan();};View.MouseDown+=MouseDownHandler;View.MouseMove+=MouseMoveHandler;View.MouseUp+=MouseUpHandler;View.MouseWheel+=WheelHandler;View.MouseRightButtonUp+=(_,e)=>{HandleViewerRightClick(e.GetPosition(View));e.Handled=true;};DragOver+=DragHover;Drop+=ReceiveDrop;SetupExperience();SetupPlugins();SetupRound24();SetupRound30();SetupRound34();SetupRound35();SetupRound36();SetupRound38();SetupRound42();
   SizeChanged+=(_,_)=>{ResponsiveToolbar();cropPanel.MaxWidth=Math.Max(240,ActualWidth-40);if(Mode=="grid")View.LayoutTiles();else if(!resizingImageWindow33&&!View.ZoomUsed)FitViewer33();};Closing+=OnClosing;Closed+=(_,_)=>{tick.Stop();watcher?.Dispose();video?.Dispose();animation?.Dispose();ClosePeek34();Operations.Close();Config.Save();Paths.Log("closed",new{loadsP95=Stats.P95,cacheHits=Cache.Hits,cacheMisses=Cache.Misses});};
   tick.Tick+=(_,_)=>Tick();tick.Start();CompositionTarget.Rendering+=Rendered;Closed+=(_,_)=>CompositionTarget.Rendering-=Rendered;
-  Loaded+=async(_,_)=>{try{if(Environment.GetCommandLineArgs().Contains("--recycle-check")||File.Exists(Path.Combine(Paths.Data,"run-recycle-check"))){File.Delete(Path.Combine(Paths.Data,"run-recycle-check"));await VerifyRecycleOnly();return;}if(Environment.GetCommandLineArgs().Contains("--playback-check")){await VerifyPlayback();return;}if(Environment.GetCommandLineArgs().Contains("--verify")){await VerifyRevision();return;}if(launchFiles?.Length>1){await Open(launchFiles[0]);collageReturnMode="viewer";collageOrigin=launchFiles[0];await SetMode("board");await ImportBoard(launchFiles);}else if(start!=null)await Open(start);else if(Environment.GetCommandLineArgs().Contains("--smoke"))await Open(Paths.Test);else if(!string.IsNullOrWhiteSpace(Config.StartupFolder)&&Directory.Exists(Config.StartupFolder)){if(Config.StartupThumbnails)await NavigateFolder(Config.StartupFolder);else await Open(Config.StartupFolder);}else await Empty();if(Config.StartFullscreen&&!fullscreen)ToggleFullscreen();if(Environment.GetCommandLineArgs().Contains("--smoke"))await Smoke.Run(this);}catch(Exception e){Error(e);}};
+  Loaded+=async(_,_)=>{try{if(Environment.GetCommandLineArgs().Contains("--recycle-check")||File.Exists(Path.Combine(Paths.Data,"run-recycle-check"))){File.Delete(Path.Combine(Paths.Data,"run-recycle-check"));await VerifyRecycleOnly();return;}if(Environment.GetCommandLineArgs().Contains("--playback-check")){await VerifyPlayback();return;}if(Environment.GetCommandLineArgs().Contains("--verify")){await VerifyRevision();return;}if(start!=null)await OpenLaunchPath(start,launchBatch);else if(Environment.GetCommandLineArgs().Contains("--smoke"))await Open(Paths.Test);else if(!string.IsNullOrWhiteSpace(Config.StartupFolder)&&Directory.Exists(Config.StartupFolder)){if(Config.StartupThumbnails)await NavigateFolder(Config.StartupFolder);else await Open(Config.StartupFolder);}else await Empty();if(Config.StartFullscreen&&!fullscreen)ToggleFullscreen();if(Environment.GetCommandLineArgs().Contains("--smoke"))await Smoke.Run(this);}catch(Exception e){Error(e);}};
  }
  void Rendered(object? sender,EventArgs args){UpdateLargeDetail();TickTransition35();AdvanceScroll();AdvanceAnimation();AnimateRound30();if(args is RenderingEventArgs r){AdvanceKeyboardPan(r.RenderingTime);if(lastRender!=TimeSpan.Zero){double ms=(r.RenderingTime-lastRender).TotalMilliseconds;if(ms>0&&ms<1000)Stats.Frame(ms);}lastRender=r.RenderingTime;}}
  void Tick(){try{PollFocus34();TickPeek34();SelectionToast();RefreshRound24();RefreshRound30();RefreshRound38();AdvanceTimedModes();AdvanceAnimation();UpdateVideoFrame();RefreshChrome();RefreshDurationTitle41();RefreshPlayer();TickTransition35();  if(diagnostic)graph.InvalidateVisual();if(toast.Visibility==Visibility.Visible&&(DateTime.Now-toastTime).TotalSeconds>toastDuration)toast.Visibility=Visibility.Collapsed;
@@ -39,15 +39,91 @@ public partial class MainWindow:Window {
 }catch(Exception e){Error(e);}}
  double toastDuration=4; public void Toast(string text,double seconds=4){toast.BeginAnimation(UIElement.OpacityProperty,null);toast.Opacity=ToastOpacity38;toast.VerticalAlignment=VerticalAlignment.Bottom;toast.Margin=new Thickness(10,0,10,18);toastDuration=seconds;toast.Text=text;toastTime=DateTime.Now;toast.Visibility=Visibility.Visible;}
  public void Error(Exception e){Paths.Log("error",e.ToString());Toast(e.Message);}
- public async Task Open(string path){ResetFilter34();int openToken=++modeTransition;GridLoading=false;GridMetadataLoading=false;GridRatios.Clear();if(Mode=="board"&&!LeaveBoard())return;hasFolder=true;thumbGeneration++;View.Thumbs.Clear();thumbFailed.Clear();ThumbCache.Clear();if(!Directory.Exists(path)&&!File.Exists(path))throw new IOException("File or folder not found.");string folder=Directory.Exists(path)?Path.GetFullPath(path):Path.GetDirectoryName(Path.GetFullPath(path))!;string? target=Directory.Exists(path)?null:Path.GetFullPath(path);Folder=folder;RememberFolder(folder);View.Tiles.Clear();View.ToolTip=null;Mode="viewer";toolbar.Visibility=Visibility.Collapsed;if(!navigatingTree)folderPanel.Visibility=Visibility.Collapsed;Quick=false;quickPanel.Visibility=Visibility.Collapsed;View.Selected.Clear();View.Scroll=0;
-  PanelLayout();if(target!=null&&Paths.Media(target)){Files=new(){target};Index=0;var display=ShowIndex(0,false);var scan=Scan();await display;await scan;if(openToken!=modeTransition)return;Index=Math.Max(0,Files.IndexOf(target));UpdateTitle();Prefetch(generation);}else{await Scan();if(openToken!=modeTransition)return;Index=Math.Max(0,target==null?0:Files.IndexOf(target));await ShowIndex(Index,false);}Watch();}
+ public async Task Open(string path)
+ {
+    bool directory = Directory.Exists(path);
+    if (!directory && !File.Exists(path))
+        throw new IOException("File or folder not found.");
+    if (Mode == "board" && !LeaveBoard())
+        return;
+
+    string fullPath = Path.GetFullPath(path);
+    string? target = directory ? null : fullPath;
+    string folder = directory ? fullPath : Path.GetDirectoryName(fullPath)!;
+    ResetFilter34();
+    int openToken = ++modeTransition;
+    GridLoading = GridMetadataLoading = false;
+    GridRatios.Clear();
+    thumbGeneration++;
+    View.Thumbs.Clear();
+    thumbFailed.Clear();
+    ThumbCache.Clear();
+    if (hasFolder)
+        PushFolderHistory(Folder, folder);
+    hasFolder = true;
+    Folder = folder;
+    RememberFolder(folder, save: false);
+    View.Tiles.Clear();
+    View.ToolTip = null;
+    Mode = "viewer";
+    toolbar.Visibility = Visibility.Collapsed;
+    if (!navigatingTree)
+        folderPanel.Visibility = Visibility.Collapsed;
+    Quick = false;
+    quickPanel.Visibility = Visibility.Collapsed;
+    View.Selected.Clear();
+    View.Scroll = 0;
+    PanelLayout();
+
+    if (target != null && Paths.Media(target))
+    {
+        Files = new() { target };
+        Index = 0;
+        await ShowIndex(0, false);
+        // Let the first image render before indexing its neighbors and saving settings.
+        await System.Windows.Threading.Dispatcher.Yield(DispatcherPriority.Background);
+        if (shutdown || !Folder.Equals(folder, StringComparison.OrdinalIgnoreCase))
+            return;
+        int scanMode = modeTransition;
+        Watch();
+        await Scan();
+        if (openToken != modeTransition)
+        {
+            // Thumbnails may have been opened while only the first file was known.
+            if (Mode == "grid" && scanMode == modeTransition && Folder.Equals(folder, StringComparison.OrdinalIgnoreCase))
+                await PrepareGrid();
+            return;
+        }
+        UpdateTitle();
+        Prefetch(generation);
+    }
+    else
+    {
+        await Scan();
+        if (openToken != modeTransition)
+            return;
+        Index = Math.Max(0, target == null ? 0 : Files.IndexOf(target));
+        await ShowIndex(Index, false);
+        if (openToken != modeTransition)
+            return;
+        Watch();
+    }
+    _ = Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, (Action)(() =>
+    {
+        if (shutdown)
+            return;
+        try { Config.Save(); }
+        catch (Exception e) { Error(e); }
+    }));
+ }
+
  public async Task Scan(){if(!hasFolder)return;int scanToken=++scanEpoch39;string folder=Folder;var sort=Config.Sort;var fs=await Task.Run(()=>{var entries=new DirectoryInfo(folder).EnumerateFiles().Where(f=>Paths.Media(f.FullName)&&!f.Name.Contains(".gazegallery-")).ToList();IEnumerable<FileInfo> list=sort switch{"Oldest"=>entries.OrderBy(f=>f.LastWriteTimeUtc).ThenBy(f=>f.Name,new Natural()),"Name A–Z"=>entries.OrderBy(f=>f.Name,new Natural()),"Name Z–A"=>entries.OrderByDescending(f=>f.Name,new Natural()),"Smallest"=>entries.OrderBy(f=>f.Length).ThenBy(f=>f.Name,new Natural()),"Largest"=>entries.OrderByDescending(f=>f.Length).ThenBy(f=>f.Name,new Natural()),_=>entries.OrderByDescending(f=>f.LastWriteTimeUtc).ThenBy(f=>f.Name,new Natural())};return list.Select(f=>f.FullName).ToList();});if(folder!=Folder||scanToken!=scanEpoch39)return;ordered=fs.ToArray();if(cropNeighbors!=null&&current!=null&&fs.Remove(current))fs.Insert(Math.Clamp(Index,0,fs.Count),current);if(shuffled){Files=Files.Where(fs.Contains).Concat(fs.Where(p=>!Files.Contains(p))).ToList();}else Files=fs;if(current!=null&&Files.Contains(current))Index=Files.IndexOf(current);if(Mode=="grid"){RebuildGridPaths();View.LayoutTiles();}}
- void Watch(){watcher?.Dispose();watcher=new FileSystemWatcher(Folder){NotifyFilter=NotifyFilters.FileName|NotifyFilters.LastWrite|NotifyFilters.Size,EnableRaisingEvents=true};FileSystemEventHandler handler=(_,_)=>DebounceScan();watcher.Created+=handler;watcher.Deleted+=handler;watcher.Changed+=handler;watcher.Renamed+=(_,_)=>DebounceScan();}
+ void Watch(){if(watcher?.Path.Equals(Folder,StringComparison.OrdinalIgnoreCase)==true)return;watcher?.Dispose();watcher=new FileSystemWatcher(Folder){NotifyFilter=NotifyFilters.FileName|NotifyFilters.LastWrite|NotifyFilters.Size,EnableRaisingEvents=true};FileSystemEventHandler handler=(_,_)=>DebounceScan();watcher.Created+=handler;watcher.Deleted+=handler;watcher.Changed+=handler;watcher.Renamed+=(_,_)=>DebounceScan();}
  void DebounceScan(){Dispatcher.BeginInvoke(()=>{scanDebounce?.Cancel();scanDebounce=new();var token=scanDebounce.Token;_=Task.Run(async()=>{try{await Task.Delay(500,token);await Dispatcher.InvokeAsync(async()=>{if(!Operations.Busy){await Scan();if(Mode=="grid"){RebuildGridPaths();View.LayoutTiles();}}});}catch(OperationCanceledException){}});});}
  public async Task ShowIndex(int index,bool manual=true,bool holdFrame=false){if(manual&&Mode=="grid")return;ClearLarge();sourceImage=null;rotation=0;flipH=flipV=false;cropPanel.Visibility=Visibility.Collapsed;CaptureSlideVisual();slideDeadline=DateTime.Now.AddSeconds(Config.SlideSeconds);if(manual)navigation++;int id=++generation;adjustmentWindow?.Close();Cropping=false;View.CropRect=Rect.Empty;ClearAB34();if(Files.Count==0){preparingImage33=false;current=null;View.Image=null;View.InvalidateVisual();UpdateTitle();await StopVideo();return;}Index=(index%Files.Count+Files.Count)%Files.Count;string path=Files[Index];TrackThumbnailReturn35(path);TrackReturn36(path);preparingImage33=true;holdFrame|=Config.Filmstrip&&View.Image!=null;holdFrame|=!Paths.Motion(path)&&(Config.ViewerBackground is "Auto" or "Blur"||imageWindow||slideshow);holdFrame|=current!=null&&File.Exists(current)&&File.Exists(path)&&Paths.Motion(current)&&Paths.Motion(path)&&View.Image!=null&&new FileInfo(current).Length<256L*1024*1024&&new FileInfo(path).Length<256L*1024*1024;bufferingVideo=Paths.Motion(path)&&!Path.GetExtension(path).Equals(".gif",StringComparison.OrdinalIgnoreCase);current=path;currentMotion=Paths.Motion(path);View.Cursor=Cursors.None;UpdateTitle();var sw=Stopwatch.StartNew();await transition.WaitAsync();try{if(id!=generation)return;await StopVideo();if(id!=generation)return;if(!holdFrame)View.Image=null;View.InvalidateVisual();if(Path.GetExtension(path).Equals(".gif",StringComparison.OrdinalIgnoreCase)||WebImages.Animated(path)){preparingImage33=false;animation=new AnimatedImage(path);animationPath35=path;return;}if(Paths.Motion(path)){if(video==null){video=new Video();video.FrameReady+=QueueVideoFrame;}videoFrame=null;videoPath35=path;video.Play(path,Config.Mute,Config.Volume,!slideshow&&!verifyNoLoop);videoActive=true;preparingImage33=false;return;}}catch(Exception ex){if(id==generation)preparingImage33=false;Error(ex);return;}finally{transition.Release();}
-  try{var large=await LoaderPool.Run(()=>LargeRaster.Open(path));if(id!=generation)return;if(large!=null){await CommitStill33(large.Preview,id);if(id!=generation)return;largeRaster=large;UpdateTitle();return;}int hits=Cache.Hits;var b=await Cache.Get(path,0,()=>id==generation);if(id!=generation)return;await CommitStill33(b,id);if(id!=generation)return;UpdateTitle();_=Task.Run(()=>CleanupTemp(path));Stats.Load(sw.Elapsed.TotalMilliseconds,Cache.Hits>hits);Paths.Log("navigation",new{ms=sw.Elapsed.TotalMilliseconds,cached=Cache.Hits>hits,file=Path.GetFileName(path)});Prefetch(id);}catch(OperationCanceledException){if(id==generation)await ShowIndex(Index,false);}catch(Exception e){if(id==generation){preparingImage33=false;Error(e);}}}
+  try{int hits=Cache.Hits;var cached=Cache.TryGetCached(path,0);var large=cached==null?await LoaderPool.Run(()=>LargeRaster.Open(path)):null;if(id!=generation)return;if(large!=null){await CommitStill33(large.Preview,id);if(id!=generation)return;largeRaster=large;UpdateTitle();return;}var b=cached??await Cache.Get(path,0,()=>id==generation);if(id!=generation)return;await CommitStill33(b,id);if(id!=generation)return;UpdateTitle();double elapsed=sw.Elapsed.TotalMilliseconds;bool usedCache=cached!=null||Cache.Hits>hits;Stats.Load(elapsed,usedCache);_=Task.Run(()=>{Paths.Log("navigation",new{ms=elapsed,cached=usedCache,file=Path.GetFileName(path)});CleanupTemp(path);});Prefetch(id);}catch(OperationCanceledException){if(id==generation)await ShowIndex(Index,false);}catch(Exception e){if(id==generation){preparingImage33=false;Error(e);}}}
  async Task StopVideo(){var oldAnimation=animation;animation=null;oldAnimation?.Dispose();videoActive=false;if(video!=null)await video.Stop();videoFrame=null;}
- void Prefetch(int id){if(Files.Count<2)return;var paths=new[]{Files[(Index+1)%Files.Count],Files[(Index-1+Files.Count)%Files.Count]};_=Task.Run(async()=>{foreach(var p in paths){if(id!=generation)return;if(!Paths.Motion(p)&&!LargeRaster.IsLarge(p)){try{await Cache.Get(p,0,()=>id==generation);}catch{}}}});}
+ void Prefetch(int id){if(Files.Count<2)return;var paths=new[]{Files[(Index+1)%Files.Count],Files[(Index-1+Files.Count)%Files.Count]}.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();_=Task.Run(async()=>{foreach(var p in paths){if(id!=generation)return;try{if(!Paths.Motion(p)&&!Cache.IsCached(p,0)&&!LargeRaster.IsLarge(p))await Cache.Get(p,0,()=>id==generation);}catch{}}});}
  public void RequestThumb(string path){
   bool motion=VideoThumbnails.IsVideo(path);if(Mode!="grid"||GridHoles.Contains(path)||thumbPending.ContainsKey(path)||thumbPending.Count>=80||thumbFailed.Contains(path)||motion&&thumbPending.Keys.Count(VideoThumbnails.IsVideo)>=8)return;
   int epoch=thumbGeneration,pixels=Config.ThumbnailPixels;

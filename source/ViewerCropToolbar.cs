@@ -9,8 +9,8 @@ public partial class MainWindow
     private void BuildViewerCropToolbar()
     {
         var adjust = Ui.Button("Adjust image…", EditAdjustments);
-        var rotationControls = CreateRotationControls32();
-        var options = new WrapPanel { HorizontalAlignment = HorizontalAlignment.Right };
+        var rotation = CreateRotationControls32();
+        var options = new StackPanel();
         AddCropRatios(options);
         Ui.Check(options, "Allow overcropping", Config.CropFillOutside, value =>
         {
@@ -25,24 +25,14 @@ public partial class MainWindow
         actions.Children.Add(Ui.Button("Save as copy", () => Run(SaveCropCopy)));
         actions.Children.Add(Ui.Button("Cancel", CancelCrop));
 
-        var toolbar = new ViewerCropToolbar(adjust, rotationControls, options, actions);
-        var show = Ui.Button("Show cropping UI", () =>
-        {
-            cropPanel.Child = toolbar;
-            ResizeViewerCropToolbar();
-            View.Focus();
-        });
-        var reveal = ViewerCropToolbar.Backdrop(show);
-        options.Children.Add(Ui.Button("Hide cropping UI", () =>
+        var toolbar = new ViewerCropToolbar(adjust, rotation, options, actions, () =>
         {
             adjustmentWindow?.Close();
             motionLineMode = motionLineDragging = false;
-            cropPanel.Width = double.NaN;
-            cropPanel.Child = reveal;
             View.Focus();
-        }));
-
+        });
         cropPanel.Background = null;
+        cropPanel.VerticalAlignment = VerticalAlignment.Stretch;
         cropPanel.Child = toolbar;
         ResizeViewerCropToolbar();
     }
@@ -57,69 +47,59 @@ public partial class MainWindow
         if (rotationRuler != null)
             rotationRuler.MaxWidth = Math.Max(rotationRuler.MinWidth, width - 16);
         cropPanel.Width = width;
-        toolbar.SetAvailableWidth(width);
+        toolbar.SetAvailableHeight(View.ActualHeight > 0 ? View.ActualHeight : Height);
     }
 
     private sealed class ViewerCropToolbar : Grid
     {
+        private readonly Border cropOptions;
+        private readonly StackPanel bottom;
         private readonly Border adjust;
-        private readonly Border rotation;
-        private readonly Border options;
-        private readonly double rotationWidth;
-        private bool? narrow;
+        private readonly Button toggle;
+        private bool hidden;
 
-        public ViewerCropToolbar(Button adjust, FrameworkElement rotation, Panel options, Panel actions)
+        public ViewerCropToolbar(Button adjustments, FrameworkElement rotation, Panel options, Panel actions, Action onHide)
         {
-            this.adjust = Backdrop(adjust, HorizontalAlignment.Left);
-            this.rotation = Backdrop(rotation, HorizontalAlignment.Center);
-            this.options = Backdrop(options);
-            var save = Backdrop(actions);
+            adjust = Backdrop(adjustments, HorizontalAlignment.Left, VerticalAlignment.Top);
+            adjust.Margin = new Thickness(8, 20, 0, 0);
+            Children.Add(adjust);
 
-            ColumnDefinitions.Add(new ColumnDefinition());
-            ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            ColumnDefinitions.Add(new ColumnDefinition());
-            for (int i = 0; i < 3; i++)
-                RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-
-            SetColumn(this.options, 2);
-            SetRow(save, 2);
-            SetColumnSpan(save, 3);
-            Children.Add(this.adjust);
-            Children.Add(this.rotation);
-            Children.Add(this.options);
-            Children.Add(save);
-
-            this.rotation.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-            rotationWidth = this.rotation.DesiredSize.Width;
-        }
-
-        public void SetAvailableWidth(double width)
-        {
-            // Give the rotation ruler its own full-width row when the sides become too narrow.
-            bool useNarrowLayout = width < rotationWidth + 360;
-            if (narrow == useNarrowLayout)
-                return;
-
-            narrow = useNarrowLayout;
-            ColumnDefinitions[1].Width = useNarrowLayout ? new GridLength(0) : GridLength.Auto;
-            SetColumn(rotation, useNarrowLayout ? 0 : 1);
-            SetColumnSpan(rotation, useNarrowLayout ? 3 : 1);
-            SetRow(adjust, useNarrowLayout ? 1 : 0);
-            SetRow(options, useNarrowLayout ? 1 : 0);
-        }
-
-        public static Border Backdrop(UIElement content, HorizontalAlignment alignment = HorizontalAlignment.Right)
-        {
-            return new Border
+            var right = new StackPanel { HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top };
+            toggle = Ui.Button("Hide cropping UI", () =>
             {
-                Background = Ui.Bg,
-                Child = content,
-                CornerRadius = new CornerRadius(6),
-                HorizontalAlignment = alignment,
-                VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(0, 2, 0, 2),
-                Padding = new Thickness(4)
-            };
+                hidden = !hidden;
+                toggle!.Content = hidden ? "Show cropping UI" : "Hide cropping UI";
+                adjust.Visibility = cropOptions!.Visibility = bottom!.Visibility = hidden ? Visibility.Collapsed : Visibility.Visible;
+                if (hidden)
+                    onHide();
+            });
+            toggle.Width = 132;
+            right.Children.Add(Backdrop(toggle, HorizontalAlignment.Right, VerticalAlignment.Top));
+            cropOptions = Backdrop(options, HorizontalAlignment.Right, VerticalAlignment.Top);
+            right.Children.Add(cropOptions);
+            Children.Add(right);
+
+            bottom = new StackPanel { VerticalAlignment = VerticalAlignment.Bottom };
+            var rotationBackdrop = Backdrop(rotation, HorizontalAlignment.Center, VerticalAlignment.Bottom);
+            rotationBackdrop.Margin = new Thickness(0, 0, 0, 8);
+            bottom.Children.Add(rotationBackdrop);
+            bottom.Children.Add(Backdrop(actions, HorizontalAlignment.Right, VerticalAlignment.Bottom));
+            Children.Add(bottom);
         }
+
+        public void SetAvailableHeight(double height)
+        {
+            cropOptions.Margin = new Thickness(0, Math.Clamp(height * 0.12, 10, 135), 0, 0);
+        }
+
+        private static Border Backdrop(UIElement content, HorizontalAlignment horizontal, VerticalAlignment vertical) => new()
+        {
+            Background = Ui.Bg,
+            Child = content,
+            CornerRadius = new CornerRadius(6),
+            HorizontalAlignment = horizontal,
+            VerticalAlignment = vertical,
+            Padding = new Thickness(4)
+        };
     }
 }

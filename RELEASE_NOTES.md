@@ -1,9 +1,7 @@
-# gazegallery 0.42.0
+# gazegallery 0.42.1
 
-- Thumbnail arrivals use dotted focus. Returning from View flashes briefly, and moving focus with an arrow key clears the flash. In large folders, To top focuses the first tile and prevents the previous image from pulling the view back while thumbnails load.
-- Plain Enter opens the focused thumbnail or folder. Shift+Enter or Alt+Enter toggles fullscreen in View, Thumbnails, and Collage. In View, hold Shift and an arrow to pan, or use Ctrl+Up/Down and `=`/`-` for 5% zoom steps.
-- Paste from Ctrl+V or the thumbnail Actions menu to save clipboard content into the current folder and stay in thumbnails.
-- Start a collage from selected thumbnails or start empty. Set ordering has larger previews and up/down arrows on every row. The default export name joins up to three letters or digits per image in collage order, capped at 30 characters.
-- View crop editing puts Adjust image on the left, rotation in the center, and crop options on the right. Save actions sit at the bottom-right. Hide cropping UI leaves your crop outline and handles available.
+- View crop editing now places Adjust image at the upper left, Hide / Show in a fixed position at the upper right, and ratio options in a vertical stack below it. Rotation stays near the bottom center and save actions at the bottom right.
+- The mouse Back button retraces visited folders in thumbnail mode.
+- Explorer launch grouping runs while the first image opens. Folder indexing and settings writes follow the first image. Revisiting cached images skips another header probe, and folders with removed thumbnail placeholders use faster file lookups.
 
-The update is available through About → Check for updates → Update to latest.
+379 automated checks passed. In an offscreen benchmark, median first-image readiness fell from 814 ms with blocking grouping to 459 ms with overlapping grouping across four paired samples. Separate launches still grouped into one batch. Use About → Check for updates → Update to latest.
